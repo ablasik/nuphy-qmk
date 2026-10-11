@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "user_kb.h"
+#include "os_detection.h"
 #include "ansi.h"
 #include "mcu_pwr.h"
 #include "color.h"
@@ -40,6 +41,7 @@ bool rgb_power_save      = 0;
 uint8_t        rgb_required            = 0;
 uint8_t        rf_blink_cnt            = 0;
 uint8_t        rf_sw_temp              = 0;
+uint8_t        prev_rf_link            = 0xFF; // last wireless link before the current one
 uint8_t        host_mode               = 0;
 uint8_t        rgb_interval            = 0;
 uint8_t        delay_step_timer        = 0;
@@ -304,9 +306,10 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
     uint8_t link_bit  = 1 << dev_info.link_mode;
     bool    dial_moved = last_dial != 0xFF && dial_os != last_dial;
 
-    if (user_config.link_os_valid != LINK_OS_VALID) {
+    if (user_config.link_valid != LINK_CFG_VALID) {
         user_config.link_os       = dial_os == SYS_SW_WIN ? 0x1F : 0x00;
-        user_config.link_os_valid = LINK_OS_VALID;
+        user_config.link_frow     = 0; // top row as printed on every link
+        user_config.link_valid    = LINK_CFG_VALID;
         eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
     } else if (dial_moved) {
         if (dial_os == SYS_SW_WIN) {
@@ -319,6 +322,9 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
     last_dial = dial_os;
 
     // sys_sw_state == 0 forces a re-apply (factory reset does this)
+    if (dev_info.link_mode != last_link && last_link != 0xFF && last_link != LINK_USB && dev_info.link_mode != LINK_USB) {
+        prev_rf_link = last_link; // for LINK_PREV
+    }
     if (!dial_moved && dev_info.link_mode == last_link && dev_info.sys_sw_state != 0) { return; }
     // show the restored OS on link changes too, so the user sees what's active
     led_sys_show = led_sys_show && last_link != 0xFF;
@@ -341,6 +347,59 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
             reset_led_idx();
         }
     }
+}
+
+/**
+ * @brief  Switch back to the previous wireless device (same as tapping Fn+1..4).
+ */
+void link_prev(void) {
+    if (dev_info.link_mode == LINK_USB || prev_rf_link > LINK_BT_3 || prev_rf_link == dev_info.link_mode) { return; }
+    break_all_key();
+    rf_sw_temp = prev_rf_link;
+    set_link_mode();
+    uart_send_cmd(CMD_SET_LINK, 10, 20);
+}
+
+/**
+ * @brief  On the cable the host OS is detected: set the USB link's layout to
+ *         match (Linux counts as Windows). The dial or Fn+M+W can still flip it.
+ */
+bool process_detected_host_os_kb(os_variant_t os) {
+    if (!process_detected_host_os_user(os)) { return false; }
+    if (os == OS_UNSURE) { return true; }
+    if (os == OS_MACOS || os == OS_IOS) {
+        user_config.link_os &= ~(1 << LINK_USB);
+    } else {
+        user_config.link_os |= 1 << LINK_USB;
+    }
+    if (dev_info.link_mode == LINK_USB) { dev_info.sys_sw_state = 0; } // dial_set() re-applies it
+    return true;
+}
+
+/**
+ * @brief  Per-link top row swap: when set, the F1-F12 positions read the key from
+ *         the other layer of the pair (base <-> Fn), so plain = F-keys on Mac or
+ *         plain = media on Windows. Works with VIA remaps of either layer.
+ */
+uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
+    if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) { return KC_NO; }
+    bool frow = key.row == 0 && key.col >= 2 && key.col <= 13; // F1..F12
+    if (frow && (user_config.link_frow & (1 << dev_info.link_mode))) {
+        if (layer == MAC_BASE || layer == WIN_BASE) {
+            layer++;
+        } else if (layer == MAC_FN || layer == WIN_FN) {
+            layer--;
+        }
+    }
+    return keycode_at_keymap_location(layer, key.row, key.col);
+}
+
+void toggle_link_frow(void) {
+    user_config.link_frow ^= 1 << dev_info.link_mode;
+    eeconfig_update_kb_datablock_field(user_config, link_frow);
+    // F1-F12 glow: white = F-keys first now, blue = media first (colour_lib 9 / 6)
+    bool fkeys = user_config.link_frow & (1 << dev_info.link_mode);
+    signal_rgb_led(fkeys ? 9 : 6, g_led_config.matrix_co[0][2], g_led_config.matrix_co[0][13], 2000);
 }
 
 /**
@@ -680,7 +739,7 @@ void user_config_reset(void) {
     user_config.caps_word_enable        = 1;
     user_config.numlock_state           = 1;
     user_config.socd_mode               = 0;
-    user_config.link_os_valid           = 0; // re-seed per-link Mac/Win from the dial
+    user_config.link_valid              = 0; // re-seed per-link settings from the dial
     user_config.rf_delay_step           = 2;
     keymap_config.no_gui                = 0;
     user_config_override();
@@ -739,7 +798,8 @@ void led_power_handle(void) {
     }
 
 
-    if (rgb_matrix_is_enabled() && (rgb_matrix_get_val() != 0 || !is_side_is31fl3733_off() || rgb_required > 0)) { 
+    extern bool key_light_idle_off;
+    if (rgb_matrix_is_enabled() && ((rgb_matrix_get_val() != 0 && !key_light_idle_off) || !is_side_is31fl3733_off() || rgb_required > 0)) { 
         rgb_required = 0;
         led_debounce = 4;
         pwr_led_on();

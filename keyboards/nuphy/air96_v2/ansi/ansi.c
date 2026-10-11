@@ -484,6 +484,27 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) { toggle_link_os(); }
             return false;
 
+        case LINK_PREV:
+            if (record->event.pressed) { link_prev(); }
+            return false;
+
+        case FROW_SWAP:
+            if (record->event.pressed) { toggle_link_frow(); }
+            return false;
+
+        case LOCK_SCR:
+            if (record->event.pressed) {
+                bool mac = dev_info.sys_sw_state == SYS_SW_MAC;
+                if (mac) { register_code(KC_LCTL); }
+                register_code(KC_LGUI);
+                register_code(mac ? KC_Q : KC_L);
+                wait_ms(COMBO_HOLD_MS);
+                unregister_code(mac ? KC_Q : KC_L);
+                unregister_code(KC_LGUI);
+                if (mac) { unregister_code(KC_LCTL); }
+            }
+            return false;
+
         case QK_RGB_MATRIX_VALUE_UP:
             if (record->event.pressed) {
                 rgb_matrix_increase_val_noeeprom();
@@ -581,8 +602,10 @@ bool rgb_matrix_indicators_kb(void) {
     if (!rgb_matrix_indicators_user()) {
         return false;
     }
+    void key_backlight_power(void);
     void layer_keys_show(void);
-    layer_keys_show();
+    key_backlight_power(); // battery: half brightness, fade when idle
+    layer_keys_show();     // drawn after, at full strength
     return true;
 }
 

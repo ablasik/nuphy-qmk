@@ -21,3 +21,4 @@ bool is_side_is31fl3733_off(void);
 void rgb_matrix_set_color(int index, uint8_t red, uint8_t green, uint8_t blue);
 void side_is31fl3733_set_color_strip(uint8_t side, uint8_t r, uint8_t g, uint8_t b);
 void side_is31fl3733_dim_strip(uint8_t side, uint8_t shift);
+void is31fl3733_scale_range(uint8_t from, uint8_t to, uint8_t lv);

@@ -63,5 +63,8 @@ enum custom_keycodes {
 
     GAME_MODE,
     SOCD_TOG,
-    MACWIN_TG  // Mac/Win for the current connection (appended: keeps VIA numbering)
+    MACWIN_TG, // Mac/Win for the current connection (appended: keeps VIA numbering)
+    LINK_PREV, // back to the previous wireless device
+    LOCK_SCR,  // lock the computer: Ctrl+Cmd+Q on Mac, Win+L on Windows
+    FROW_SWAP  // swap F1-F12 and media keys on the top row, for the current connection
 };

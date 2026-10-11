@@ -293,6 +293,21 @@
 			"name": "Mac/Win\nToggle",
 			"title": "Mac/Win layout for the current connection",
 			"shortName": "MacWin_Tg"
+		},
+		{
+			"name": "Previous\nDevice",
+			"title": "Switch back to the previous wireless device",
+			"shortName": "Link_Prev"
+		},
+		{
+			"name": "Lock\nScreen",
+			"title": "Lock the computer (Ctrl+Cmd+Q on Mac, Win+L on Windows)",
+			"shortName": "Lock_Scr"
+		},
+		{
+			"name": "F-keys\nMedia",
+			"title": "Swap F1-F12 and media keys on the top row, for the current connection",
+			"shortName": "FRow_Swap"
 		}
 	]
 }

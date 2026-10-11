@@ -5,6 +5,14 @@ The following customizations were applied on top of the stock firmware.
 
 -  Mac/Win layout is remembered per connection (USB, BT1-3, 2.4G). Moving the Mac/Win switch sets the layout for the connection you're on; switching to another connection (Fn+1..4 or the mode switch) restores that connection's layout and shows the Mac/Win indicator. After a factory reset all connections start from the switch position. Fn + M + W (MACWIN_TG) flips Mac/Win for the current connection without touching the switch.
 
+-  Fn + M + F swaps the top row between F1-F12 and media keys, remembered per connection (USB, BT1-3, 2.4G). The F-row glows white when F1-F12 come first, blue when media keys do.
+
+-  Fn + Esc locks the computer (Ctrl+Cmd+Q on Mac, Win+L on Windows). Fn + Tab switches back to the previous wireless device.
+
+-  On the cable the host OS is detected and the USB connection's layout is set to match (macOS/iOS = Mac, Windows/Linux = Win).
+
+-  On battery the key backlight runs at half the brightness you set and fades out after 30 s without typing (LED power is cut once dark). On the cable or while charging it's exactly as set. Tune with BAT_BACKLIGHT_LEVEL / IDLE_FADE_TICKS.
+
 -  Fn + M + O Changes the side light to display on either left side or right side or alternating sides every 1 minute.
 
 -  Side light indicators: lights stay off unless something changes how the keys behave, and each sits on the side of its key. Left strip: Caps Lock (top LED, cyan; breathing = Caps Word), Win/Cmd lock (2nd, red), game mode (3rd, magenta); a connection event briefly fills the strip (breathing = connecting, fast blink = pairing, solid 2 s = connected). Right strip: Num Lock (top, white), battery gauge on demand (green > 80%, yellow, orange, red <= 20%; top LED breathes while charging), bottom LED pulses red below 20%, and a 2 s white toast when a setting changes (sleep mode, SOCD, debounce type). While an indicator is on, the rest of its strip dims to 1/4 so it reads over any side light effect. Colours live in one palette (IND_* in user_kb.h). Holding Fn lights every key with a Fn function (mint); Fn+M lights the M-layer keys (mustard).

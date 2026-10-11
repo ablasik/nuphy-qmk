@@ -177,10 +177,12 @@ typedef struct
     uint8_t socd_mode;
     uint8_t rf_delay_step;
     uint8_t link_os;       // per-link Mac/Win: bit (1 << link_mode) set = Win
-    uint8_t link_os_valid; // LINK_OS_VALID once link_os is initialised
+    uint8_t link_frow;     // per-link top row: bit (1 << link_mode) set = F1-F12 first, media with Fn
+    uint8_t link_valid;    // LINK_CFG_VALID once the per-link settings are initialised
+    uint8_t reserved[5];   // room for new settings without another EEPROM reset
 } user_config_t;
 
-#define LINK_OS_VALID 0xA5
+#define LINK_CFG_VALID 0xA5
 
 /*
  * Side light indicator palette, at indicator level (scaled by side brightness).
@@ -289,6 +291,8 @@ void    switch_dev_link(uint8_t mode);
 void    dial_sw_scan(void);
 void    dial_sw_fast_scan(void);
 void    toggle_link_os(void);
+void    link_prev(void);
+void    toggle_link_frow(void);
 void    timer_pro(void);
 void    load_eeprom_data(void);
 void    delay_update_eeprom_data(void);

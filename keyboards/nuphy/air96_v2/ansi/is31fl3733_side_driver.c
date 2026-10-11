@@ -45,3 +45,15 @@ void side_is31fl3733_dim_strip(uint8_t side, uint8_t shift) {
         rgb_matrix_set_color(SIDE_INDEX + i, pwm[led.r] >> shift, pwm[led.g] >> shift, pwm[led.b] >> shift);
     }
 }
+
+/**
+ * @brief  Scale what the effect drew on LEDs [from, to) to lv/256.
+ */
+void is31fl3733_scale_range(uint8_t from, uint8_t to, uint8_t lv) {
+    is31fl3733_led_t led;
+    for (uint8_t i = from; i < to; i++) {
+        memcpy_P(&led, (&g_is31fl3733_leds[i]), sizeof(led));
+        uint8_t *pwm = driver_buffers[led.driver].pwm_buffer;
+        rgb_matrix_set_color(i, (pwm[led.r] * lv) >> 8, (pwm[led.g] * lv) >> 8, (pwm[led.b] * lv) >> 8);
+    }
+}

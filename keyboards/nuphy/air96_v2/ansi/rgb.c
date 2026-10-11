@@ -760,6 +760,31 @@ void numlock_rgb_show(void) {
     }
 }
 
+// On battery the key backlight runs at half the brightness you set and fades out
+// after a while without typing; on the cable (or charging) it's exactly as set.
+#ifndef BAT_BACKLIGHT_LEVEL
+#    define BAT_BACKLIGHT_LEVEL 128 // of 256
+#endif
+#ifndef IDLE_FADE_TICKS
+#    define IDLE_FADE_TICKS 3000 // 30 s in 10 ms ticks
+#endif
+#define IDLE_FADE_LEN 200 // 2 s fade
+
+bool key_light_idle_off = false; // fully faded: lets led_power_handle() cut LED power
+
+void key_backlight_power(void) {
+    key_light_idle_off = false;
+    if (USB_ACTIVE || game_mode_enable) { return; }
+
+    uint16_t lv = BAT_BACKLIGHT_LEVEL;
+    if (no_act_time > IDLE_FADE_TICKS) {
+        uint32_t t = no_act_time - IDLE_FADE_TICKS;
+        lv         = t >= IDLE_FADE_LEN ? 0 : lv - (lv * t) / IDLE_FADE_LEN;
+    }
+    key_light_idle_off = lv == 0;
+    is31fl3733_scale_range(0, SIDE_INDEX, lv);
+}
+
 /**
  * @brief  While Fn (or Fn+M) is held, light the keys that do something on that
  *         layer: mint for Fn, mustard for M (same colours as the Quick Guide).

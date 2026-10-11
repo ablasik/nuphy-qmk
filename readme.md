@@ -37,6 +37,12 @@ Added in this repo:
 - Rebased on **current upstream QMK** (adi4086's fork was frozen at early 2025).
 - **RF packet validation** ported from NuPhy firmware 2.1.x.
 - **Readable lights**: holding Fn lights up every key that does something; the side strips show only what changes how your keys behave (Caps, Num, Win lock, game mode) plus battery and connection events.
+- **Small daily helpers**:
+  - Fn+M+F swaps F1–F12 and media keys on the top row, per device.
+  - Fn+Esc locks the computer.
+  - Fn+Tab switches back to the previous device.
+  - On the cable the layout follows the detected OS.
+  - On battery the backlight runs at half brightness and fades after 30 s idle.
 - **Mac/Win per connection**: USB, BT1–3 and 2.4G each remember their own layout. Flip the switch once per device; switching connections restores it.
 - **Wireless fixes**:
   - Faster BT reconnect after wake.
@@ -63,6 +69,16 @@ Added in this repo:
 [Download the Quick Guide as PDF](keyboards/nuphy/air96_v2/ansi/quick_guide.pdf)
 
 The full list of key combos is in [`keyboards/nuphy/air96_v2/ansi/customizations.md`](keyboards/nuphy/air96_v2/ansi/customizations.md).
+
+## Tips
+
+**Raycast.** F4 on the Mac layout sends ⌘ Space, so if Raycast uses ⌘ Space (the usual setup when it replaces Spotlight), F4 opens Raycast. For a Hyper key (⌃⌥⇧⌘), use Raycast's own setting: *Settings → Advanced → Hyper Key*, usually on Caps Lock. That needs no firmware change, but it only works on Macs running Raycast.
+
+**Hyper key and tap/hold keys in VIA.** You don't need to rebuild the firmware for these. In VIA, pick a key, open *Special → Any* and type a QMK keycode:
+
+- `HYPR_T(KC_ESC)`: Esc when tapped, Hyper (Ctrl+Opt+Cmd+Shift) when held. Handy under Caps Lock for Raycast, Alfred or Hammerspoon shortcuts. If VIA doesn't accept it, use the long form `MT(MOD_LCTL|MOD_LSFT|MOD_LALT|MOD_LGUI, KC_ESC)`.
+- `MT(MOD_LCTL, KC_ESC)`: Esc when tapped, Ctrl when held.
+- `LT(1, KC_SPC)`: Space when tapped, layer 1 when held.
 
 ## Requirements
 
