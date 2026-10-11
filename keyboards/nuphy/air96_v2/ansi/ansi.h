@@ -62,5 +62,6 @@ enum custom_keycodes {
     DEBOUNCE_T,
 
     GAME_MODE,
-    SOCD_TOG
+    SOCD_TOG,
+    MACWIN_TG  // Mac/Win for the current connection (appended: keeps VIA numbering)
 };

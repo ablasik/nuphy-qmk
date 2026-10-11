@@ -2,9 +2,12 @@
 
 The following customizations were applied on top of the stock firmware. 
 
+
+-  Mac/Win layout is remembered per connection (USB, BT1-3, 2.4G). Moving the Mac/Win switch sets the layout for the connection you're on; switching to another connection (Fn+1..4 or the mode switch) restores that connection's layout and shows the Mac/Win indicator. After a factory reset all connections start from the switch position. Fn + M + W (MACWIN_TG) flips Mac/Win for the current connection without touching the switch.
+
 -  Fn + M + O Changes the side light to display on either left side or right side or alternating sides every 1 minute.
 
--  Numlock indicator using side leds while color
+-  Side light indicators: lights stay off unless something changes how the keys behave, and each sits on the side of its key. Left strip: Caps Lock (top LED, cyan; breathing = Caps Word), Win/Cmd lock (2nd, red), game mode (3rd, magenta); a connection event briefly fills the strip (breathing = connecting, fast blink = pairing, solid 2 s = connected). Right strip: Num Lock (top, white), battery gauge on demand (green > 80%, yellow, orange, red <= 20%; top LED breathes while charging), bottom LED pulses red below 20%, and a 2 s white toast when a setting changes (sleep mode, SOCD, debounce type). While an indicator is on, the rest of its strip dims to 1/4 so it reads over any side light effect. Colours live in one palette (IND_* in user_kb.h). Holding Fn lights every key with a Fn function (mint); Fn+M lights the M-layer keys (mustard).
 
 -  FN + M + N shorcut will change the led indicator from side leds to KC_NUM key. If KC_NUM does not exist it will look for KC_INS and NUMLOCK_INS
 
@@ -16,7 +19,7 @@ The following customizations were applied on top of the stock firmware.
 
 -  Bluetooth and RF will signal on corresponding number keys when trying to connect (Blue color and keys 1 to 3 for BT_1 to BT_3 or Green color and key 4 when it is trying to connect using 2.4G)
 
--  Side light brightness levels are now 7 (instead of 6) from 0 (disabled) to 6 (full). A new lower step has been introduced. Default level after reset is 1 (the lowest ilumination possible for side leds)
+-  Side light brightness levels are now 7 (instead of 6) from 0 (disabled) to 6 (full). A new lower step has been introduced. Default level after reset is 4 (96/255, same as stock)
 
 -  The system indicators now have 3 levels of brightness (before there was only 1 level) that are dependend on the side light brightness. Thus for example capslock will no longer light at full brightness if side leds have a lower brightness selected.
 
@@ -151,7 +154,7 @@ Example: <br />
    - After 10 seconds idle MCU goes to light sleep and matrix scan rate goes to ~ 700 <br />
    - Side lights do not go to sleep. RF goes to sleep after 30 minutes. MCU does not go to deep sleep <br />
  <br />
-  Side indicators will flash blue for 0.5s when board enters MCU deep sleep mode when on BT and will falsh green for 0.5s when on 2.4G, as an indicator. <br />
+  Before MCU deep sleep both strips light blue (BT) or green (2.4G) and drain from the top. <br />
   Keyboard will not enter sleep regardless of settings if it is charging or if it is connected via USB. <br />
   Keyboard will not enter sleep if GAME MODE is active <br />
  <br />

@@ -81,6 +81,78 @@ void set_sys_light(void) {
 static void side_off_mode_show(void);
 void rgb_matrix_update_pwm_buffers(void);
 
+/*
+ * Indicator language for the side strips (5 LEDs each, pos 0 = top).
+ * Persistent = only states that change what the keys do; everything else is an
+ * event shown briefly. Each indicator sits on the side of the key it belongs to.
+ *   left strip  (Caps / Win side): Caps Lock / Caps Word, Win lock, game mode;
+ *                briefly the whole strip for connecting / pairing / connected
+ *   right strip (numpad side):     Num Lock; battery gauge on demand, low-battery
+ *                pulse, and a 2s "toast" when a setting changes
+ * Only the LEDs that carry information change; the rest keep the side effect.
+ */
+#ifndef SIDE_ROW0_IS_BOTTOM
+// Row 0 is the top: stock battery bar lit rows 3-4 (LEDs 108/109) when low, filling from
+// the bottom. If the gauge (Fn+\\) fills from the top on your board, set this to 1.
+#    define SIDE_ROW0_IS_BOTTOM 0
+#endif
+
+static void side_pos(uint8_t side, uint8_t pos, uint8_t r, uint8_t g, uint8_t b) {
+    uint8_t row = SIDE_ROW0_IS_BOTTOM ? (SIDE_LINE - 1 - pos) : pos;
+    rgb_matrix_set_color(side_led_index_tab[row][side == LEFT_SIDE ? 0 : 1], r, g, b);
+}
+
+// same as side_pos, scaled to indicator brightness (follows side light level)
+static void side_pos_ind(uint8_t side, uint8_t pos, uint8_t r, uint8_t g, uint8_t b) {
+    current_rgb.r = r, current_rgb.g = g, current_rgb.b = b;
+    set_sys_light();
+    side_pos(side, pos, current_rgb.r, current_rgb.g, current_rgb.b);
+}
+
+// side_pos_ind at a 0..255 level, for breathing/pulsing indicators
+static void side_pos_lv(uint8_t side, uint8_t pos, uint8_t lv, uint8_t r, uint8_t g, uint8_t b) {
+    side_pos_ind(side, pos, (r * lv) >> 8, (g * lv) >> 8, (b * lv) >> 8);
+}
+
+// 0..255 triangle wave with the given period, for breathing indicators
+static uint8_t pulse(uint16_t period) {
+    uint16_t t = timer_read32() % period;
+    uint16_t half = period / 2;
+    return t < half ? (t * 255) / half : ((period - t) * 255) / half;
+}
+
+static uint32_t toast_timer = 0;
+static uint8_t  toast_n, toast_of;
+static rgb_t    toast_rgb;
+
+/**
+ * @brief  Show a setting on the right strip for 2s: n of `of` LEDs lit from the
+ *         bottom, the remaining choices dimmed so the scale is visible.
+ */
+void side_toast(uint8_t n, uint8_t of, uint8_t r, uint8_t g, uint8_t b) {
+    toast_n     = n;
+    toast_of    = of;
+    toast_rgb   = (rgb_t){.r = r, .g = g, .b = b};
+    toast_timer = timer_read32() | 1;
+}
+
+static bool side_toast_show(void) {
+    if (toast_timer == 0) { return false; }
+    if (timer_elapsed32(toast_timer) > 2000) {
+        toast_timer = 0;
+        return false;
+    }
+    for (uint8_t i = 0; i < SIDE_LINE; i++) { // i counts from the bottom
+        uint8_t div = i < toast_n ? 1 : (i < toast_of ? 8 : 0);
+        if (div) {
+            side_pos_ind(RIGHT_SIDE, SIDE_LINE - 1 - i, toast_rgb.r / div, toast_rgb.g / div, toast_rgb.b / div);
+        } else {
+            side_pos(RIGHT_SIDE, SIDE_LINE - 1 - i, RGB_OFF);
+        }
+    }
+    return true;
+}
+
 void clear_rgb(void) {
     rgb_matrix_set_color_all(RGB_OFF);
     rgb_matrix_update_pwm_buffers();
@@ -173,45 +245,30 @@ void side_mode_control(uint8_t dir) {
 }
 
 void signal_sleep(void) {
-    uint8_t r, g, b;
-    r = 0x00; g = 0x00; b = 0x80;
-    if (dev_info.link_mode == LINK_RF_24) {
-        g = 0x80;
-        b = 0x00;
-    }
+    static const uint8_t link_rgb[2][3] = {{IND_BT}, {IND_24G}};
+    const uint8_t *c = link_rgb[dev_info.link_mode == LINK_RF_24];
+    uint8_t r = c[0], g = c[1], b = c[2];
     pwr_led_on();
     wait_ms(10);
     side_is31fl3733_set_color_strip(LEFT_SIDE + RIGHT_SIDE, r, g, b);
     rgb_matrix_update_pwm_buffers();
-    wait_ms(140);
+    // going to sleep: both strips drain from the top down
+    for (uint8_t pos = 0; pos < SIDE_LINE; pos++) {
+        wait_ms(60);
+        side_pos(LEFT_SIDE, pos, RGB_OFF);
+        side_pos(RIGHT_SIDE, pos, RGB_OFF);
+        rgb_matrix_update_pwm_buffers();
+    }
 }
-
 
 /**
  * @brief   system switch led show
  */
 void sys_sw_led_show(void) {
     if (sys_show_timer == 0) { return; }
-    if (dev_info.sys_sw_state == SYS_SW_MAC) {
-        current_rgb.r = SIDE_BLINK_LIGHT;
-        current_rgb.g = SIDE_BLINK_LIGHT;
-        current_rgb.b = SIDE_BLINK_LIGHT;
-    } else {
-        current_rgb.r = 0x00;
-        current_rgb.g = 0x00;
-        current_rgb.b = SIDE_BLINK_LIGHT;
-    }
-
-    if (timer_elapsed32(sys_show_timer) >= 2900) {
-        sys_show_timer = 0;
-    }
-
-    if ((timer_elapsed32(sys_show_timer) / 500) % 2 == 0) {
-        set_sys_light();
-        side_is31fl3733_set_color_strip(RIGHT_SIDE, current_rgb.r, current_rgb.g, current_rgb.b);
-    } else {
-        side_is31fl3733_set_color_strip(RIGHT_SIDE, RGB_OFF);
-    }
+    sys_show_timer = 0;
+    // Mac: Cmd key glows white. Win: Win key glows blue. (colour_lib: 9 white, 6 blue)
+    signal_rgb_led(dev_info.sys_sw_state == SYS_SW_MAC ? 9 : 6, led_idx.KC_LGUI, UINT8_MAX, 3000);
 }
 
 /**
@@ -219,29 +276,12 @@ void sys_sw_led_show(void) {
  */
 void sleep_sw_led_show(void) {
     if (sleep_show_timer == 0) { return; }
-    current_rgb.r = 0x00, current_rgb.g = 0x00, current_rgb.b = 0x00;
+    sleep_show_timer = 0;
+    // like every setting toast: 3 = full saving, 2 = lights only, 1 = never
     switch (user_config.sleep_mode) {
-        case 0:
-            current_rgb.r = SIDE_BLINK_LIGHT;
-            break;
-        case 1:
-            current_rgb.g = SIDE_BLINK_LIGHT;
-            break;
-        case 2:
-            current_rgb.r = SIDE_BLINK_LIGHT;
-            current_rgb.g = SIDE_BLINK_LIGHT;
-            break;
-    }
-
-    if (timer_elapsed32(sleep_show_timer) >= 2900) {
-        sleep_show_timer = 0;
-    }
-
-    if ((timer_elapsed32(sleep_show_timer) / 500) % 2 == 0) {
-        set_sys_light();
-        side_is31fl3733_set_color_strip(RIGHT_SIDE, current_rgb.r, current_rgb.g, current_rgb.b);
-    } else {
-        side_is31fl3733_set_color_strip(RIGHT_SIDE, RGB_OFF);
+        case 1: side_toast(3, 3, IND_WHITE); break;
+        case 2: side_toast(2, 3, IND_WHITE); break;
+        default: side_toast(1, 3, IND_WHITE); break;
     }
 }
 
@@ -249,24 +289,31 @@ void sleep_sw_led_show(void) {
  * @brief  host system led indicate.
  */
 void sys_led_show(void) {
-    current_rgb.g = SIDE_BLINK_LIGHT;
-    current_rgb.b = SIDE_BLINK_LIGHT;
-    current_rgb.r = 0x00;
-    uint8_t led_side = LEFT_SIDE;
+    bool caps  = host_keyboard_led_state().caps_lock;
+    bool cword = is_caps_word_on() && user_config.caps_word_enable;
+    bool num   = user_config.numlock_state == 1 && host_keyboard_led_state().num_lock;
 
-    if (host_keyboard_led_state().caps_lock) {
-        led_side = RIGHT_SIDE;
-        set_sys_light();
-        side_is31fl3733_set_color_strip(LEFT_SIDE, current_rgb.r, current_rgb.g, current_rgb.b);
+    // The side effect can be any colour (rainbow wave passes cyan, red, magenta...):
+    // dim the rest of a strip to 1/4 while it carries an indicator, so it reads.
+    if (caps || cword || keymap_config.no_gui || game_mode_enable) { side_is31fl3733_dim_strip(LEFT_SIDE, 2); }
+    if (num) { side_is31fl3733_dim_strip(RIGHT_SIDE, 2); }
+
+    // left: things that change what the left-hand keys do
+    if (caps) {
+        side_pos_ind(LEFT_SIDE, 0, IND_CAPS);                // Caps Lock
+    } else if (cword) {
+        side_pos_lv(LEFT_SIDE, 0, pulse(1200), IND_CAPS);    // Caps Word: breathing
     }
-
-    if (user_config.numlock_state != 1 || !host_keyboard_led_state().num_lock) { return; }
-
-    current_rgb.r = SIDE_BLINK_LIGHT;
-    current_rgb.g = SIDE_BLINK_LIGHT;
-    current_rgb.b = SIDE_BLINK_LIGHT;
-    set_sys_light();
-    side_is31fl3733_set_color_strip(led_side, current_rgb.r, current_rgb.g, current_rgb.b);
+    if (keymap_config.no_gui) {
+        side_pos_ind(LEFT_SIDE, 1, IND_LOCKED);              // Win/Cmd locked
+    }
+    if (game_mode_enable) {
+        side_pos_ind(LEFT_SIDE, 2, IND_GAME);                // game mode
+    }
+    // right: next to the numpad
+    if (num) {
+        side_pos_ind(RIGHT_SIDE, 0, IND_WHITE);              // Num Lock
+    }
 }
 
 static uint8_t breathe_data(uint8_t step) {
@@ -439,35 +486,35 @@ static void side_one_show(void)
  */
 void rf_led_show(void) {
     static uint32_t rf_blink_timer = 0;
-    uint16_t        rf_blink_period = 0;
 
-    if (rf_blink_cnt || (rf_link_show_time < RF_LINK_SHOW_TIME)) {
-        current_rgb.r = dev_info.link_mode == LINK_USB ? SIDE_BLINK_LIGHT : 0x00; // LINK_USB
-        current_rgb.g = dev_info.link_mode % LINK_USB == 0 ? SIDE_BLINK_LIGHT : 0x00; // LINK_USB || LINK_RF_24
-        current_rgb.b = dev_info.link_mode % LINK_USB != 0 ? SIDE_BLINK_LIGHT : 0x00; // LINK_BT
-    } else {
-        return;
-    }
+    if (!rf_blink_cnt && rf_link_show_time >= RF_LINK_SHOW_TIME) { return; }
 
+    // colour = transport (the slot number lights up on keys 1-4)
+    static const uint8_t link_rgb[3][3] = {{IND_BT}, {IND_24G}, {IND_USB}};
+    const uint8_t *c = link_rgb[dev_info.link_mode == LINK_USB ? 2 : dev_info.link_mode == LINK_RF_24 ? 1 : 0];
+    uint8_t r = c[0], g = c[1], b = c[2];
+
+    uint8_t level = 255; // connected: solid
     if (rf_blink_cnt) {
+        uint16_t period = dev_info.rf_state == RF_PAIRING ? RF_LED_PAIR_PERIOD : RF_LED_LINK_PERIOD * 2;
         if (dev_info.rf_state == RF_PAIRING) {
-            rf_blink_period = RF_LED_PAIR_PERIOD;
+            level = timer_elapsed32(rf_blink_timer) < period / 2 ? 255 : 0; // pairing: fast blink
         } else {
-            rf_blink_period = RF_LED_LINK_PERIOD;
+            level = pulse(period); // connecting: breathe
         }
-
-        if (timer_elapsed32(rf_blink_timer) > (rf_blink_period >> 1)) {
-            current_rgb.r = 0x00, current_rgb.g = 0x00, current_rgb.b = 0x00;
-        }
-
-        if (timer_elapsed32(rf_blink_timer) >= rf_blink_period) {
+        if (timer_elapsed32(rf_blink_timer) >= period) {
             rf_blink_cnt--;
             rf_blink_timer = timer_read32();
         }
     }
+    r = (r * level) >> 8, g = (g * level) >> 8, b = (b * level) >> 8;
 
+    // a connection event briefly takes the whole left strip
+    for (uint8_t i = 0; i < SIDE_LINE; i++) {
+        side_pos_ind(LEFT_SIDE, i, r, g, b);
+    }
+    current_rgb.r = r, current_rgb.g = g, current_rgb.b = b;
     set_sys_light();
-    side_is31fl3733_set_color_strip(LEFT_SIDE, current_rgb.r, current_rgb.g, current_rgb.b);
 
     // light up corresponding BT/RF key
     if (dev_info.link_mode <= LINK_BT_3) {
@@ -475,14 +522,11 @@ void rf_led_show(void) {
         if (rf_link_show_time > RF_LINK_SHOW_TIME - 10) {
             rgb_matrix_set_color(led_idx.KC_GRV + my_pos, RGB_OFF);
         } else {
-            uint8_t my_pos = dev_info.link_mode == LINK_RF_24 ? 4 : dev_info.link_mode;
             rgb_required = 1;
             rgb_matrix_set_color(led_idx.KC_GRV + my_pos, current_rgb.r, current_rgb.g, current_rgb.b);
         }
     }
-
 }
-
 
 /**
  * @brief  bat_num_led.
@@ -532,33 +576,25 @@ void bat_num_led(void) {
 /**
  * @brief  Battery level indicator
  */
-void bat_percent_led(void)
+void bat_percent_led(bool charging)
 {
-    uint8_t bat_percent = dev_info.rf_battery;
-    uint8_t bat_end_led = 4;
-    current_rgb.r = SIDE_BLINK_LIGHT, current_rgb.g = SIDE_BLINK_LIGHT / 2, current_rgb.b = 0x00;
+    uint8_t pct = dev_info.rf_battery;
+    // 1-5 LEDs from the bottom, one per 20%
+    uint8_t n   = 1 + (pct > 20) + (pct > 40) + (pct > 60) + (pct > 80);
+    // colour bands as on NuPhy's Halo: green > 80%, yellow > 50%, orange > 20%, red
+    static const uint8_t bands[4][3] = {{IND_BAT_HI}, {IND_BAT_MID}, {IND_BAT_LO}, {IND_LOCKED}};
+    const uint8_t *c = bands[pct > 80 ? 0 : pct > 50 ? 1 : pct > 20 ? 2 : 3];
 
-    if (bat_percent <= 30) {
-        bat_end_led = 1;
-        current_rgb.r = SIDE_BLINK_LIGHT, current_rgb.g = 0x00, current_rgb.b = 0x00;
-    } else if (bat_percent <= 40) {
-        bat_end_led = 1;
-    } else if (bat_percent <= 60) {
-        bat_end_led = 2;
-    } else if (bat_percent <= 75) {
-        bat_end_led = 3;
-    } else if (bat_percent <= 90) {
-        bat_end_led = 4;
-    } else {
-        current_rgb.r = 0x00, current_rgb.g = SIDE_BLINK_LIGHT, current_rgb.b = 0x00;
+    for (uint8_t i = 0; i < SIDE_LINE; i++) { // i counts from the bottom
+        uint8_t pos = SIDE_LINE - 1 - i;
+        if (i >= n) {
+            side_pos(RIGHT_SIDE, pos, RGB_OFF);
+        } else if (charging && i == n - 1) {
+            side_pos_lv(RIGHT_SIDE, pos, pulse(1500), c[0], c[1], c[2]); // charging: top segment breathes
+        } else {
+            side_pos_ind(RIGHT_SIDE, pos, c[0], c[1], c[2]);
+        }
     }
-
-    set_sys_light();
-    side_is31fl3733_set_color_strip(RIGHT_SIDE, current_rgb.r, current_rgb.g, current_rgb.b);
-    for (uint8_t i = bat_end_led + 1; i < SIDE_LINE; i++) {
-        rgb_matrix_set_color(SIDE_INDEX + 9 - i, RGB_OFF);
-    }
-
 }
 
 /**
@@ -570,8 +606,6 @@ void bat_led_show(void)
     static bool bat_show_breath = 0;
     static bool f_init          = 1;
 
-    static uint8_t  bat_play_point = 0;
-    static uint32_t bat_play_timer = 0;
     static uint32_t bat_show_time  = 0;
 
     static uint32_t bat_sts_debounce = 0;
@@ -583,10 +617,11 @@ void bat_led_show(void)
         charge_state  = dev_info.rf_charge;
     }
 
+    bool charging = dev_info.rf_charge == 0x03;
+    bool low      = dev_info.rf_battery < low_bat_level && !charging;
+
     if (game_mode_enable) {
-        if(dev_info.rf_battery < low_bat_level) {
-            side_is31fl3733_set_color_strip(RIGHT_SIDE, 0x40, 0x00, 0x00);
-        }
+        if (low) { side_pos(RIGHT_SIDE, SIDE_LINE - 1, 0x40, 0x00, 0x00); }
         return;
     }
 
@@ -612,27 +647,11 @@ void bat_led_show(void)
         }
     }
 
-    if (dev_info.rf_battery < low_bat_level) {
-        bat_show_flag = true;
-        bat_show_breath = true;
-        bat_show_time = timer_read32();
-    }
-
     if (f_bat_hold || bat_show_flag) {
-
-        if (bat_show_breath) {
-
-            if (timer_elapsed32(bat_play_timer) > 15) {
-                bat_play_timer = timer_read32();
-                light_point_playing(0, 1, BREATHE_TAB_LEN, &bat_play_point);
-            }
-            current_rgb.r = SIDE_BLINK_LIGHT, current_rgb.g = dev_info.rf_battery < low_bat_level ? 0x00 : SIDE_BLINK_LIGHT / 2, current_rgb.b = 0x00;
-            count_rgb_light(breathe_data(bat_play_point));
-            set_sys_light();
-            side_is31fl3733_set_color_strip(RIGHT_SIDE, current_rgb.r, current_rgb.g, current_rgb.b);
-        } else {
-            bat_percent_led();
-        }
+        bat_percent_led(charging || bat_show_breath);
+    } else if (low) {
+        // low battery: only the bottom LED pulses red; the rest keeps the effect
+        side_pos_lv(RIGHT_SIDE, SIDE_LINE - 1, pulse(2000), IND_LOCKED);
     }
 }
 
@@ -741,6 +760,34 @@ void numlock_rgb_show(void) {
     }
 }
 
+/**
+ * @brief  While Fn (or Fn+M) is held, light the keys that do something on that
+ *         layer: mint for Fn, mustard for M (same colours as the Quick Guide).
+ */
+void layer_keys_show(void) {
+    uint8_t layer = get_highest_layer(layer_state);
+    bool    fn    = layer == MAC_FN || layer == WIN_FN;
+    if (!fn && layer != M_LAYER) { return; }
+
+    uint8_t v = rgb_matrix_get_val() > 96 ? rgb_matrix_get_val() : 96;
+    uint8_t r = fn ? 0x30 : 0xFF, g = fn ? 0xFF : 0xB0, b = fn ? 0xC0 : 0x10;
+    r = (r * v) >> 8, g = (g * v) >> 8, b = (b * v) >> 8;
+
+    rgb_required = 1;
+    for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+        for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+            uint8_t led = g_led_config.matrix_co[row][col];
+            if (led == NO_LED) { continue; }
+            uint16_t kc = keycode_at_keymap_location(layer, row, col);
+            if (kc != KC_TRNS && kc != KC_NO) {
+                rgb_matrix_set_color(led, r, g, b);
+            } else {
+                rgb_matrix_set_color(led, RGB_OFF);
+            }
+        }
+    }
+}
+
 void rgb_matrix_step_game_mode(uint8_t step) {
     if (step) {
         user_config.game_rgb_mod++;
@@ -790,11 +837,11 @@ void normal_led_process(void) {
 
 
     side_one_show();
+    sys_led_show(); // persistent indicators first: the battery gauge may cover them briefly
     bat_led_show();
     sleep_sw_led_show();
-
+    side_toast_show();
     sys_sw_led_show();
-    sys_led_show();
 }
 
 void realtime_led_process(void) {

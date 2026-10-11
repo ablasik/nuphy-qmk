@@ -39,8 +39,9 @@ void early_user_debounce_init(void) {
     user_config.debounce_ms = DEBOUNCE;
 }
 
-// we use num_rows rather than MATRIX_ROWS to support split keyboards
-void debounce_init(uint8_t num_rows) {
+
+void debounce_init(void) {
+    const uint8_t num_rows = MATRIX_ROWS;
     uint8_t max_counters = num_rows * MATRIX_COLS;
     early_user_debounce_init();
 
@@ -56,7 +57,8 @@ void debounce_free(void) {
     debounce_counters = NULL;
 }
 
-bool debounce(matrix_row_t raw[], matrix_row_t cooked[], uint8_t num_rows, bool changed) {
+bool debounce(matrix_row_t raw[], matrix_row_t cooked[], bool changed) {
+    const uint8_t num_rows = MATRIX_ROWS;
     bool updated_last = false;
     cooked_changed    = false;
 

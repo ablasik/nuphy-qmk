@@ -21,6 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mcu_pwr.h"
 #include "version.h"
 
+// Hold time for synthesized shortcuts. 2ms TAP_CODE_DELAY was too short for
+// some hosts over BT/2.4G; stock nuphy holds them 50ms.
+#define COMBO_HOLD_MS 50
+
 char            socd_type[4][14] = { "disabled", "cancellation", "exclusion", "nullification" };
 
 /* qmk pre-process record */
@@ -72,8 +76,8 @@ bool process_record_socd(uint16_t keycode, keyrecord_t *record) {
 }
 
 
-/* qmk process record user*/
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+/* keyboard-level record hooks (was process_record_user, which stole the hook from keymaps) */
+static bool process_record_nuphy(uint16_t keycode, keyrecord_t *record) {
 
     switch (keycode) {
         case SIDE_VAI:
@@ -146,6 +150,10 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
         return false;
     }
 
+    if (!process_record_nuphy(keycode, record)) {
+        return false;
+    }
+
     if (!process_record_socd(keycode, record)) { 
         return false;
     }
@@ -174,6 +182,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             } else {
                 dev_info.link_mode = LINK_USB;
                 uart_send_cmd(CMD_SET_LINK, 10, 10);
+                rf_blink_cnt = 3; // link indicator blink, like stock
             }
             return false;
 
@@ -233,13 +242,13 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                 if (dev_info.sys_sw_state == SYS_SW_MAC) {
                     register_code(KC_LGUI);
                     register_code(KC_SPACE);
-                    wait_ms(TAP_CODE_DELAY);
+                    wait_ms(COMBO_HOLD_MS);
                     unregister_code(KC_LGUI);
                     unregister_code(KC_SPACE);
                 } else {
                     register_code(KC_LCTL);
                     register_code(KC_F);
-                    wait_ms(TAP_CODE_DELAY);
+                    wait_ms(COMBO_HOLD_MS);
                     unregister_code(KC_F);
                     unregister_code(KC_LCTL);
                 }
@@ -252,7 +261,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                     register_code(KC_LGUI);
                     register_code(KC_LSFT);
                     register_code(KC_3);
-                    wait_ms(TAP_CODE_DELAY);
+                    wait_ms(COMBO_HOLD_MS);
                     unregister_code(KC_3);
                     unregister_code(KC_LSFT);
                     unregister_code(KC_LGUI);
@@ -268,13 +277,19 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                     register_code(KC_LGUI);
                     register_code(KC_LSFT);
                     register_code(KC_4);
-                    wait_ms(TAP_CODE_DELAY);
+                    wait_ms(COMBO_HOLD_MS);
                     unregister_code(KC_4);
                     unregister_code(KC_LSFT);
                     unregister_code(KC_LGUI);
-                }
-                else {
-                    tap_code(KC_PSCR);
+                } else {
+                    // Win+Shift+S: Snipping Tool area capture (stock nuphy)
+                    register_code(KC_LGUI);
+                    register_code(KC_LSFT);
+                    register_code(KC_S);
+                    wait_ms(COMBO_HOLD_MS);
+                    unregister_code(KC_S);
+                    unregister_code(KC_LSFT);
+                    unregister_code(KC_LGUI);
                 }
             }
             return false;
@@ -461,7 +476,12 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                 dprintf("SOCD:    %s(%d)\n", socd_type[user_config.socd_mode], user_config.socd_mode);
 #endif
                 signal_rgb_led(user_config.socd_mode * 2, led_idx.SOCD_TOG, UINT8_MAX, 3000);
+                side_toast(user_config.socd_mode, 3, IND_WHITE); // 0-3 of 3
             }
+            return false;
+
+        case MACWIN_TG:
+            if (record->event.pressed) { toggle_link_os(); }
             return false;
 
         case QK_RGB_MATRIX_VALUE_UP:
@@ -561,11 +581,8 @@ bool rgb_matrix_indicators_kb(void) {
     if (!rgb_matrix_indicators_user()) {
         return false;
     }
-
-    // low power mode
-    power_save();
-    // power down unused LEDs
-    led_power_handle();
+    void layer_keys_show(void);
+    layer_keys_show();
     return true;
 }
 
@@ -610,6 +627,11 @@ void housekeeping_task_kb(void) {
 #endif
 
     delay_update_eeprom_data();
+
+    // Here, not in rgb_matrix_indicators_kb: QMK skips indicators while RGB is
+    // toggled off, which kept LED power on and disabled low-battery saving.
+    power_save();       // low power mode
+    led_power_handle(); // power down unused LEDs
 
     if (game_mode_enable) { return; }
 

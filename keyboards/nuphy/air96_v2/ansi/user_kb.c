@@ -219,6 +219,8 @@ void user_key_press(void) {
         f_rf_dfu_press++;
         if (f_rf_dfu_press > MEDIUM_PRESS_DELAY) {
             f_rf_dfu_press = 0;
+            // RF DFU over a wireless link would just kill that link (stock nuphy: USB only)
+            if (dev_info.link_mode != LINK_USB) { return; }
 #ifndef NO_DEBUG
             dprintf("RF DFU Mode Enabled\n");
 #endif
@@ -233,9 +235,11 @@ void user_key_press(void) {
  * @brief  Release all keys, clear keyboard report.
  */
 void break_all_key(void) {
-    clear_keyboard();
+    // Drop stale queued reports first, then release: the release must be sent
+    // (and kept in the repeat buffer), not wiped by the clear.
     void clear_report_buffer_and_queue(void);
     clear_report_buffer_and_queue();
+    clear_keyboard();
 }
 
 /**
@@ -293,7 +297,34 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
         }
     }
 
-    if (dial_scan & 0x02) {
+    // Mac/Win is remembered per link (USB, BT1-3, 2.4G). Moving the dial sets it
+    // for the current link; switching links restores that link's setting.
+    static uint8_t last_dial = 0xFF, last_link = 0xFF;
+    uint8_t dial_os   = (dial_scan & 0x02) ? SYS_SW_MAC : SYS_SW_WIN;
+    uint8_t link_bit  = 1 << dev_info.link_mode;
+    bool    dial_moved = last_dial != 0xFF && dial_os != last_dial;
+
+    if (user_config.link_os_valid != LINK_OS_VALID) {
+        user_config.link_os       = dial_os == SYS_SW_WIN ? 0x1F : 0x00;
+        user_config.link_os_valid = LINK_OS_VALID;
+        eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
+    } else if (dial_moved) {
+        if (dial_os == SYS_SW_WIN) {
+            user_config.link_os |= link_bit;
+        } else {
+            user_config.link_os &= ~link_bit;
+        }
+        eeconfig_update_kb_datablock_field(user_config, link_os);
+    }
+    last_dial = dial_os;
+
+    // sys_sw_state == 0 forces a re-apply (factory reset does this)
+    if (!dial_moved && dev_info.link_mode == last_link && dev_info.sys_sw_state != 0) { return; }
+    // show the restored OS on link changes too, so the user sees what's active
+    led_sys_show = led_sys_show && last_link != 0xFF;
+    last_link    = dev_info.link_mode;
+
+    if (!(user_config.link_os & link_bit)) {
         if (dev_info.sys_sw_state != SYS_SW_MAC) {
             if (led_sys_show) { sys_show_timer = timer_read32(); }
             default_layer_set(1 << MAC_BASE);
@@ -310,6 +341,15 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
             reset_led_idx();
         }
     }
+}
+
+/**
+ * @brief  flip Mac/Win for the current link (same as moving the dial).
+ */
+void toggle_link_os(void) {
+    user_config.link_os ^= 1 << dev_info.link_mode;
+    eeconfig_update_kb_datablock_field(user_config, link_os);
+    dev_info.sys_sw_state = 0; // dial_set() re-applies it and shows the indicator
 }
 
 /**
@@ -426,7 +466,7 @@ void timer_pro(void) {
  * @brief  load eeprom data.
  */
 void load_eeprom_data(void) {
-    eeconfig_read_kb_datablock(&user_config);
+    eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config));
     if (user_config.init_layer < 100) { user_config_reset(); }
 }
 
@@ -446,7 +486,7 @@ void delay_update_eeprom_data(void) {
     if (timer_elapsed32(eeprom_update_timer) < (1000 * 30)) { return; }
     if (user_update) {
         if (game_mode_enable) {
-            eeconfig_read_kb_datablock(&read_user_config);
+            eeconfig_read_kb_datablock(&read_user_config, 0, sizeof(read_user_config));
             read_user_config.game_rgb_val       = rgb_matrix_config.hsv.v;
             read_user_config.game_rgb_hue       = rgb_matrix_config.hsv.h;
             read_user_config.game_rgb_sat       = rgb_matrix_config.hsv.s;
@@ -456,9 +496,9 @@ void delay_update_eeprom_data(void) {
             read_user_config.game_debounce_ms   = user_config.debounce_ms;
             read_user_config.game_debounce_type = user_config.debounce_type;
 
-            eeconfig_update_kb_datablock(&read_user_config);
+            eeconfig_update_kb_datablock(&read_user_config, 0, sizeof(read_user_config));
         } else {
-            eeconfig_update_kb_datablock(&user_config);
+            eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
         }
 
         user_update         = 0;
@@ -467,7 +507,7 @@ void delay_update_eeprom_data(void) {
 #endif
     }
     if (rgb_update) {
-        eeconfig_update_rgb_matrix();
+        eeconfig_force_flush_rgb_matrix();
         rgb_update          = 0;
 #ifndef NO_DEBUG
         dprint("Updating EEPROM:  rgb_config\n");
@@ -482,14 +522,14 @@ void game_mode_tweak(void)
         if (eeprom_update_timer != 0) {
             eeprom_update_timer = 0;
             if (user_update) {
-                eeconfig_update_kb_datablock(&user_config);
+                eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
                 user_update = 0;
 #ifndef NO_DEBUG
                 dprint("Updating EEPROM: user_config\n");
 #endif
             }
             if (rgb_update) {
-                eeconfig_update_rgb_matrix();
+                eeconfig_force_flush_rgb_matrix();
                 rgb_update          = 0;
 #ifndef NO_DEBUG
                 dprint("Updating EEPROM:  rgb_config\n");
@@ -511,7 +551,7 @@ void game_mode_tweak(void)
         if (user_config.numlock_state != 0) { user_config.numlock_state = 1; }
     } else {
         rgb_matrix_reload_from_eeprom();
-        eeconfig_read_kb_datablock(&user_config);
+        eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config));
     }
     // signal_rgb_led(game_mode_enable, G_LED, G_LED, 2000);
 #ifndef NO_DEBUG
@@ -600,6 +640,7 @@ void debounce_type(void) {
     dprintf("debounce type: %s\n", debounce_algo[user_config.debounce_type]);
 #endif
     signal_rgb_led(user_config.debounce_type == 1 ? 3 : user_config.debounce_type, led_idx.KC_D, UINT8_MAX, 3000);
+    side_toast(user_config.debounce_type + 1, 3, IND_WHITE); // 1-3 of 3
 }
 
 #ifndef NO_DEBUG
@@ -626,7 +667,7 @@ void user_config_reset(void) {
 
     user_config.init_layer              = 100 + DEFAULT_LAYER;
     user_config.ee_side_mode            = 0;
-    user_config.ee_side_light           = 1; 
+    user_config.ee_side_light           = 4; // 96/255, same as stock nuphy default
     user_config.ee_side_speed           = 2;
     user_config.ee_side_rgb             = 1;
     user_config.ee_side_colour          = 0;
@@ -639,15 +680,16 @@ void user_config_reset(void) {
     user_config.caps_word_enable        = 1;
     user_config.numlock_state           = 1;
     user_config.socd_mode               = 0;
+    user_config.link_os_valid           = 0; // re-seed per-link Mac/Win from the dial
     user_config.rf_delay_step           = 2;
     keymap_config.no_gui                = 0;
     user_config_override();
     game_config_reset(0);
-    eeconfig_update_kb_datablock(&user_config);
+    eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
 }
 
 void game_config_reset(uint8_t save_to_eeprom) {
-    if (save_to_eeprom) { eeconfig_read_kb_datablock(&user_config); }
+    if (save_to_eeprom) { eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config)); }
     user_config.game_side_colour       = SIDE_MATRIX_GAME_MODE;
     user_config.game_side_light        = 2;
     user_config.game_rgb_mod           = RGB_MATRIX_GAME_MODE;
@@ -657,7 +699,7 @@ void game_config_reset(uint8_t save_to_eeprom) {
     user_config.game_debounce_ms       = DEBOUNCE;
     user_config.game_debounce_type     = 1;
     game_config_override();
-    if (save_to_eeprom) { eeconfig_update_kb_datablock(&user_config); }
+    if (save_to_eeprom) { eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config)); }
 }
 
 /**
@@ -666,16 +708,18 @@ void game_config_reset(uint8_t save_to_eeprom) {
  *       from older Nuphy leaks.
  */
 void power_save(void) {
-    static uint16_t power_check_timer      = 0;
+    static uint32_t power_check_timer      = 0;
     if (timer_elapsed32(power_check_timer) < 5000) { return; }
+    power_check_timer = timer_read32();
 
-    if (dev_info.rf_battery > low_bat_level && rgb_power_save == 1) {
+    // +5% hysteresis so a reading jittering around the threshold doesn't toggle LEDs
+    if (dev_info.rf_battery > low_bat_level + 5 && rgb_power_save == 1) {
         if (game_mode_enable) {
             rgb_matrix_config.hsv.v = user_config.game_rgb_val;
             user_config.ee_side_light = user_config.game_side_light;
         } else {
             rgb_matrix_reload_from_eeprom();
-            eeconfig_read_kb_datablock(&user_config);
+            eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config));
         }
         rgb_power_save = 0;
     } else if ((rgb_matrix_config.hsv.v > 0 || user_config.ee_side_light > 1) && dev_info.rf_battery < low_bat_level) {

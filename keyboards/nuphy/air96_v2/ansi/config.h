@@ -58,7 +58,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define IS31FL3733_I2C_ADDRESS_1            0b1010000
 #define IS31FL3733_I2C_ADDRESS_2            0b1010011
 
-#define ISSI_TIMEOUT                        1
+#define IS31FL3733_I2C_TIMEOUT              1
 
 #define I2C_DRIVER                          I2CD1
 #define I2C1_SCL_PIN                        B8
@@ -86,7 +86,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RF_QUEUE_SIZE                       64
 
 #define OS_DETECTION_DEBOUNCE              250
-#define OS_DETECTION_KEYBOARD_RESET
 
 
 // #define DISABLE_MCU_SLEEP
