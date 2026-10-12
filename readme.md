@@ -131,7 +131,11 @@ Or with the [QMK CLI](https://docs.qmk.fm/newbs_getting_started):
 qmk compile -kb nuphy/air96_v2/ansi -km default
 ```
 
-GitHub Actions builds all boards on every push to `nuphy-keyboards` and on pull requests that touch `keyboards/nuphy/` (the `.bin` files are in the run's artifacts). Pushing a `v*` tag publishes a release with the `.bin` and VIA files.
+## CI and releases
+
+- **Every push and pull request:** GitHub Actions lints and builds all boards and renders the Quick Guides. The `.bin` files and guides are in the run's artifacts, so any PR can be flashed and tried.
+- **Every week:** upstream QMK is merged on a `qmk-sync/<date>` branch, all boards are built on it, and a PR is opened with the result (an issue if the merge conflicts).
+- **Releases:** a `v*` tag makes a draft release with every board's `.bin`, VIA file and Quick Guide PDF; it's published after a test on real keyboards. See [`docs/nuphy/RELEASING.md`](docs/nuphy/RELEASING.md).
 
 ## Contributing
 

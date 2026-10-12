@@ -1,8 +1,10 @@
 name: NuPhy firmware
 
-# Builds every NuPhy board on each push (and on PRs that touch the boards). Pushing a tag
-# like v1.2.0 also publishes a GitHub release with the .bin and VIA files
-# (tags with a dash, e.g. v1.2.0-rc1, become pre-releases).
+# CI: every push to nuphy-keyboards and every PR touching the boards is linted,
+# built and gets fresh Quick Guides (all downloadable from the run's artifacts).
+# CD: pushing a tag like v1.2.0 creates a *draft* release with everything a user
+# needs; publish it by hand once the build was tried on a keyboard (RELEASING.md).
+# Tags with a dash (v1.2.0-rc1) become pre-releases.
 
 on:
   push:
@@ -11,14 +13,15 @@ on:
   pull_request:
     paths:
       - 'keyboards/nuphy/**'
-      - '.github/workflows/nuphy.yml'
+      - 'docs/nuphy/**'
+      - '.github/workflows/nuphy*.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  firmware:
     runs-on: ubuntu-latest
     container: ghcr.io/qmk/qmk_cli
     strategy:
@@ -29,35 +32,96 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0   # tags, so the firmware reports its version (git describe)
 
-      - name: Build
+      - name: Lint
         run: |
           git config --global --add safe.directory '*'
-          qmk compile -kb nuphy/${{ matrix.board }}/ansi -km default
-          mkdir -p out
-          cp nuphy_${{ matrix.board }}_ansi_default.bin out/nuphy_${{ matrix.board }}_${GITHUB_REF_NAME//\//-}.bin
-          cp keyboards/nuphy/${{ matrix.board }}/ansi/keymaps/*.json out/
+          qmk lint -kb nuphy/${{ matrix.board }}/ansi -km default
+
+      - name: Build
         shell: bash
+        run: |
+          qmk compile -kb nuphy/${{ matrix.board }}/ansi -km default
+          version=$(git describe --tags --always)
+          mkdir -p out
+          cp nuphy_${{ matrix.board }}_ansi_default.bin "out/nuphy_${{ matrix.board }}_${version}.bin"
+          cp keyboards/nuphy/${{ matrix.board }}/ansi/keymaps/*.json out/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.board }}
+          name: firmware-${{ matrix.board }}
           path: out/
+
+  guides:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Render Quick Guides
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+          python3 docs/nuphy/guide/build.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guides
+          path: docs/nuphy/*_quick_guide.*
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [firmware, guides]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           path: out
           merge-multiple: true
 
+      - name: Release notes
+        shell: bash
+        run: |
+          prev=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          {
+            echo "## Flashing"
+            echo
+            echo "Download the \`.bin\` for **your** board. Hold \`Fn+M+Esc\` and keep holding \`Esc\` to enter the bootloader, then:"
+            echo
+            echo '```sh'
+            echo "dfu-util -a 0 -d 0483:DF11 -s 0x08000000:leave -D nuphy_air96_v2_${GITHUB_REF_NAME}.bin"
+            echo '```'
+            echo
+            echo "Update the RF module and dongle to NuPhy's firmware 2.1.5 first. Load the matching VIA file in usevia.app to remap. The Quick Guide PDFs list every shortcut."
+            echo
+            if [ -n "$prev" ]; then
+              echo "## Changes since $prev"
+              echo
+              git log --no-merges --format='- %s' "$prev..$GITHUB_REF_NAME" -- keyboards/nuphy docs/nuphy .github/workflows/nuphy*.yml
+            else
+              echo "First release: see the README for everything this firmware adds."
+            fi
+            echo
+            echo "## SHA-256"
+            echo
+            echo '```'
+            (cd out && sha256sum -- *.bin)
+            echo '```'
+          } > notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
-          files: out/*
-          generate_release_notes: true
+          draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+          body_path: notes.md
+          files: |
+            out/*.bin
+            out/*.json
+            out/*_quick_guide.pdf

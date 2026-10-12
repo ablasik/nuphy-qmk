@@ -1,0 +1,98 @@
+name: Sync upstream QMK
+
+# Weekly: merge qmk/master into a qmk-sync/<date> branch, build every board on it
+# and open a PR with the result. A merge conflict opens an issue instead.
+# (Pushes and PRs made with GITHUB_TOKEN don't trigger other workflows, so the
+# build runs here and its result goes in the PR description.)
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: nuphy-keyboards
+          fetch-depth: 0
+
+      - name: Merge qmk/master
+        id: merge
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch --no-tags https://github.com/qmk/qmk_firmware.git master:refs/remotes/qmk/master
+          if git merge-base --is-ancestor qmk/master HEAD; then
+            echo "Already up to date with qmk/master"
+            echo "result=uptodate" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          branch="qmk-sync/$(date -u +%Y-%m-%d)"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "upstream=$(git rev-parse --short qmk/master)" >> "$GITHUB_OUTPUT"
+          git checkout -b "$branch"
+          if git merge --no-edit -m "Merge qmk/master into nuphy-keyboards" qmk/master; then
+            echo "result=merged" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > conflicts.txt
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build every board
+        if: steps.merge.outputs.result == 'merged'
+        run: |
+          git submodule update --init --recursive
+          echo "| Board | Build |" > builds.md
+          echo "|---|---|" >> builds.md
+          for b in air60_v2 air75_v2 air96_v2; do
+            if docker run --rm -v "$PWD":/qmk_firmware -w /qmk_firmware ghcr.io/qmk/qmk_cli \
+                 qmk compile -kb nuphy/$b/ansi -km default > build-$b.log 2>&1; then
+              echo "| $b | ✅ |" >> builds.md
+            else
+              echo "| $b | ❌ ([log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})) |" >> builds.md
+              tail -40 build-$b.log
+            fi
+          done
+
+      - name: Open PR
+        if: steps.merge.outputs.result == 'merged'
+        run: |
+          branch='${{ steps.merge.outputs.branch }}'
+          git push origin "$branch"
+          {
+            echo "Merges upstream QMK (qmk/master @ ${{ steps.merge.outputs.upstream }})."
+            echo
+            cat builds.md
+            echo
+            echo "Before merging: if a build failed, fix the board code on this branch (upstream API changes usually need a small follow-up commit). Flash at least one board and check typing, wireless and sleep."
+          } > body.md
+          draft=()
+          if grep -q '❌' builds.md; then draft=(--draft); fi
+          gh pr create --base nuphy-keyboards --head "$branch" "${draft[@]}" \
+            --title "Merge upstream QMK ($(date -u +%Y-%m-%d))" --body-file body.md
+
+      - name: Report conflicts
+        if: steps.merge.outputs.result == 'conflict'
+        run: |
+          title='Upstream QMK merge has conflicts'
+          if gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number' | grep -q .; then
+            echo "Issue already open"; exit 0
+          fi
+          {
+            echo "The weekly merge of qmk/master (@ ${{ steps.merge.outputs.upstream }}) stopped on conflicts in:"
+            echo
+            sed 's/^/- `/; s/$/`/' conflicts.txt
+            echo
+            echo "Merge by hand: \`git fetch qmk master && git merge qmk/master\` (see README, Staying on current QMK)."
+          } > body.md
+          gh issue create --title "$title" --body-file body.md
