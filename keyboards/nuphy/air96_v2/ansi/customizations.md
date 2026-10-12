@@ -21,9 +21,9 @@ The following customizations were applied on top of the stock firmware.
 
 -  New custom key: NUMLOCK_INS. When held for more than 300ms it will trigger NUM_LOCK when pressed it will act as KC_INS
 
--  New algorithm to prevent unnecessary EEPROM writes. When you change RGB modes or side lights it will only save the setting to EEPROM after 30 seconds. <br />
+-  New algorithm to prevent unnecessary EEPROM writes. When you change RGB modes or side lights it will only save the setting to EEPROM 10 seconds after the last change. <br />
    If for instance your need to press mode button for 5 times to reach your favourite RGB effect, normally you will get 1 EEPROM save for each press (5 EEPROM writes). <br />
-   With the new algorithm you will get 1 write to EEPROM after 40 seconds from last press. As a side efect if you change something and you shutdown the keyboard immediately you will lose the change. <br />
+   With the new algorithm you will get 1 write to EEPROM 10 seconds after the last press. As a side efect if you change something and you shutdown the keyboard immediately you will lose the change. <br />
 
 -  Bluetooth and RF will signal on corresponding number keys when trying to connect (Blue color and keys 1 to 3 for BT_1 to BT_3 or Green color and key 4 when it is trying to connect using 2.4G)
 
@@ -76,7 +76,7 @@ The following customizations were applied on top of the stock firmware.
 -  FN + M + ] => will trigger MCU deep sleep imediately (only if keyboard is not charging or connected via USB)
 
 -  FN + M + G => enabled GAME MODE. This Mode disables some rgb light functions to ensure maximum scan rate is achived. The G letter will light up green when mode is active and red when game mode is disabled. Long pressing FN + M + G will reset game mode settings to default. <br />
-   RGB animations and Side light animations can be modified by user. The new settings will be saved after 30 seconds. But the adjustment is limited.
+   RGB animations and Side light animations can be modified by user. The new settings will be saved after 10 seconds. But the adjustment is limited.
 
 -  CAPS_WORD is enabled by default. Double press Left Shift key to activate it for 5 seconds. CAPS_LOCK will light up light blue. This function can be disabled (CAPS_WORD) when holding FN + M + CAPS_LOCK. Also by default this is disabled when GAME MODE is active.
 

@@ -21,6 +21,24 @@ permissions:
   contents: read
 
 jobs:
+  changelog:
+    # a PR that changes the firmware says what changed for users
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: CHANGELOG.md updated
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files=$(git diff --name-only "$BASE" HEAD)
+          if grep -q '^keyboards/nuphy/' <<< "$files" && ! grep -qx 'CHANGELOG.md' <<< "$files"; then
+            echo "::error::Add a line under [Unreleased] in CHANGELOG.md, or label the PR skip-changelog."
+            exit 1
+          fi
+
   firmware:
     runs-on: ubuntu-latest
     container: ghcr.io/qmk/qmk_cli
@@ -89,8 +107,16 @@ jobs:
       - name: Release notes
         shell: bash
         run: |
-          prev=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          version=${GITHUB_REF_NAME#v}
+          # the [x.y.z] section of CHANGELOG.md, up to the next version heading
+          awk -v v="$version" '$0 ~ "^## \\[" {p = index($0, "[" v "]") > 0; next} p' CHANGELOG.md > changes.md
+          if ! grep -q '[^[:space:]]' changes.md; then
+            echo "::error::CHANGELOG.md has no [$version] section. Rename [Unreleased] to [$version] before tagging (docs/nuphy/RELEASING.md)."
+            exit 1
+          fi
           {
+            cat changes.md
+            echo
             echo "## Flashing"
             echo
             echo "Download the \`.bin\` for **your** board. Hold \`Fn+M+Esc\` and keep holding \`Esc\` to enter the bootloader, then:"
@@ -100,14 +126,6 @@ jobs:
             echo '```'
             echo
             echo "Update the RF module and dongle to NuPhy's firmware 2.1.5 first. Load the matching VIA file in usevia.app to remap. The Quick Guide PDFs list every shortcut."
-            echo
-            if [ -n "$prev" ]; then
-              echo "## Changes since $prev"
-              echo
-              git log --no-merges --format='- %s' "$prev..$GITHUB_REF_NAME" -- keyboards/nuphy docs/nuphy .github/workflows/nuphy*.yml
-            else
-              echo "First release: see the README for everything this firmware adds."
-            fi
             echo
             echo "## SHA-256"
             echo

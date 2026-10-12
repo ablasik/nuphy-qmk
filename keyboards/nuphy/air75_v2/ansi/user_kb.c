@@ -531,7 +531,8 @@ void delay_update_eeprom_data(void) {
         if (user_update || rgb_update) { eeprom_update_timer = timer_read32(); }
         return;
     }
-    if (timer_elapsed32(eeprom_update_timer) < (1000 * 30)) { return; }
+    // batch settings writes: a burst of changes (e.g. stepping through effects) is one write
+    if (timer_elapsed32(eeprom_update_timer) < (1000 * 10)) { return; }
     if (user_update) {
         if (game_mode_enable) {
             eeconfig_read_kb_datablock(&read_user_config, 0, sizeof(read_user_config));
