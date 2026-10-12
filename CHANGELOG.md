@@ -6,6 +6,8 @@ Write entries for people who type on the keyboard: what changes for them, not ho
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-12
+
 First release of the community firmware, compared with [adi4086 v1.1.7.0](https://github.com/adi4086/qmk_firmware/releases/tag/v1.1.7.0). Flashing it resets the keyboard settings and the VIA keymap once.
 
 ### Added
