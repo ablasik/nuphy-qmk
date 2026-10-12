@@ -52,14 +52,16 @@ const uint8_t side_speed_table[5][5] = {
     [SIDE_OFF]    = {50, 50, 50, 50, 50},
 };
 
+// Levels 0-4 as stock (4 = 96, the default). Stock topped out at 160; the
+// IS31FL3733 is already at full current, so the top steps go up to full PWM.
 const uint8_t side_light_table[7] = {
     0,
     16,
     32,
     64,
     96,
-    128,
     160,
+    255,
 };
 
 const uint8_t side_led_index_tab[SIDE_LINE][2] =
@@ -520,10 +522,10 @@ void rf_led_show(void) {
     if (dev_info.link_mode <= LINK_BT_3) {
         uint8_t my_pos = dev_info.link_mode == LINK_RF_24 ? 4 : dev_info.link_mode;
         if (rf_link_show_time > RF_LINK_SHOW_TIME - 10) {
-            rgb_matrix_set_color(led_idx.KC_GRV + my_pos, RGB_OFF);
+            rgb_matrix_set_color(led_idx.NUM[my_pos - 1], RGB_OFF);
         } else {
             rgb_required = 1;
-            rgb_matrix_set_color(led_idx.KC_GRV + my_pos, current_rgb.r, current_rgb.g, current_rgb.b);
+            rgb_matrix_set_color(led_idx.NUM[my_pos - 1], current_rgb.r, current_rgb.g, current_rgb.b);
         }
     }
 }
@@ -555,7 +557,7 @@ void bat_num_led(void) {
     if (bat_percent % 10 == 0) { bat_pct--; }
 
     for(uint8_t i=0; i < bat_pct; i++) {
-        rgb_matrix_set_color(20 + i, r, g, b);
+        rgb_matrix_set_color(led_idx.NUM[i], r, g, b);
     }
     // set percent
 
@@ -569,7 +571,7 @@ void bat_num_led(void) {
         r = 0x00; g = 0xff; b = 0x00;
     }
 
-    rgb_matrix_set_color(20 + bat_pct, r, g, b);
+    rgb_matrix_set_color(led_idx.NUM[bat_pct], r, g, b);
 
 }
 

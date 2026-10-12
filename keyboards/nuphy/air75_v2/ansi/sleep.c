@@ -55,8 +55,8 @@ void sleep_handle(void) {
     if (delay_step_timer < 50) { return; }
     delay_step_timer = 0;
 
-    // deep sleep check
-    if (user_config.sleep_mode != 1 || f_rf_sleep) {
+    // no MCU deep sleep on USB: STOP mode drives D+/D- low and the host sees a detach
+    if (user_config.sleep_mode != 1 || f_rf_sleep || dev_info.link_mode == LINK_USB) {
         f_goto_deepsleep = 0;
     } else if (no_act_time >= (user_config.light_sleep + DEEP_SLEEP_TIME) * T_MIN) {
         f_goto_deepsleep = 1;

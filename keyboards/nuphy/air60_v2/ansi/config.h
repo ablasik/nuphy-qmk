@@ -26,11 +26,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_DRIVER_SDB1                     C6
 #define RGB_DRIVER_SDB2                     C7
 
-#define SERIAL_DRIVER                       SD1
-#define SD1_TX_PIN                          B6
-#define SD1_TX_PAL_MODE                     0
-#define SD1_RX_PIN                          B7
-#define SD1_RX_PAL_MODE                     0
+// RF module UART. QMK used to map SD1_* onto these; since #24855 only UART_* is read,
+// and the defaults (A9/A10) are matrix columns: ghost keypresses and garbage RF frames.
+#define UART_DRIVER                         SD1
+#define UART_TX_PIN                         B6
+#define UART_TX_PAL_MODE                    0
+#define UART_RX_PIN                         B7
+#define UART_RX_PAL_MODE                    0
 
 #if !defined(NO_DEBUG) && !defined(CONSOLE_ENABLE)
 #define NO_DEBUG
@@ -44,7 +46,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DEBUG_MATRIX_SCAN_RATE
 #endif // MATRIX_SCAN_RATE
 
-
 #define DYNAMIC_KEYMAP_MACRO_DELAY          8
 
 // This is a 7-bit address, that gets left-shifted and bit 0
@@ -54,10 +55,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // 0b1110111 AD <-> VCC
 // 0b1110101 AD <-> SCL
 // 0b1110110 AD <-> SDA
-#define DRIVER_ADDR_1                       0b1010000
-#define DRIVER_ADDR_2                       0b1010011
+// #define DRIVER_ADDR_1                       0b1010000
+// #define DRIVER_ADDR_2                       0b1010011
+#define IS31FL3733_I2C_ADDRESS_1            0b1010000
+#define IS31FL3733_I2C_ADDRESS_2            0b1010011
 
-#define ISSI_TIMEOUT                        1
+#define IS31FL3733_I2C_TIMEOUT              1
 
 #define I2C_DRIVER                          I2CD1
 #define I2C1_SCL_PIN                        B8
@@ -80,9 +83,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_MATRIX_LED_COUNT                (DRIVER_1_LED_TOTAL + DRIVER_2_LED_TOTAL)
 
 #define WAIT_US_TIMER                       GPTD14
-#define EECONFIG_KB_DATA_SIZE               25
+#define EECONFIG_KB_DATA_SIZE               32
 #define GPIO_INPUT_PIN_DELAY                12
 #define RF_QUEUE_SIZE                       64
 
-#define RGB_MATRIX_DISABLE_KEYCODES
-// #define RGB_MATRIX_SOLID_REACTIVE_GRADIENT_MODE
+#define OS_DETECTION_DEBOUNCE              250
+
+
+// #define DISABLE_MCU_SLEEP
+
+// remove unused QMK functions to save space
+/*
+#define NO_ACTION_ONESHOT
+#undef LAYER_LOCK_ENABLE
+#undef LEADER_ENABLE
+#undef GRAVE_ESC_ENABLE
+#undef SPACE_CADET_ENABLE
+*/
+

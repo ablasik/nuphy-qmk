@@ -4,7 +4,7 @@
 #pragma once
 
 #define    SIDE_LINE           5
-#define    SIDE_INDEX          100
+#define    SIDE_INDEX          (RGB_MATRIX_LED_COUNT - 2 * SIDE_LINE) // side LEDs come last
 #define    LEFT_SIDE           1
 #define    RIGHT_SIDE          2
 

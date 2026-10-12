@@ -212,7 +212,7 @@ typedef struct
     uint8_t KC_F1;
     uint8_t RF_DFU;
     uint8_t KC_F12;
-    uint8_t KC_GRV;
+    uint8_t NUM[10]; // number row 1..0
     uint8_t SOCD_TOG;
 } led_index_t;
 

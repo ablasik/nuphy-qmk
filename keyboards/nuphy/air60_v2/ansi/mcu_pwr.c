@@ -21,9 +21,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 //------------------------------------------------
 
-static bool f_usb_deinit  = 0;
-static bool rgb_led_on    = 0;
-static bool tim6_enabled  = false;
+static bool rgb_led_on      = 0;
+static bool tim6_enabled    = false;
+static uint16_t sleep_count = 0;
 
 // Pin definitions
 static const pin_t row_pins[MATRIX_ROWS] = MATRIX_ROW_PINS;
@@ -80,9 +80,11 @@ void SYSCFG_EXTILineConfig(uint8_t EXTI_PortSourceGPIOx, uint8_t EXTI_PinSourcex
  * @note This is Nuphy's "open sourced" sleep logic. It's not deep sleep.
  */
 void enter_light_sleep(void) {
-    uart_send_cmd(CMD_SET_CONFIG, 5, 5);
+    // uart_send_cmd(CMD_SET_CONFIG, 5, 5);
     if ((dev_info.link_mode == LINK_RF_24 && f_rf_sleep) || dev_info.rf_state != RF_CONNECT) {
         uart_send_cmd(CMD_SLEEP, 5, 5);
+    } else {
+        uart_send_cmd(CMD_SET_CONFIG, 5, 5);
     }
 
     led_pwr_sleep_handle();
@@ -90,37 +92,7 @@ void enter_light_sleep(void) {
     // clear_report_buffer_and_queue();
 }
 
-/**
- * @brief  Enter deep sleep
- * @note This is Nuphy's un-released logic with some cleanup/refactoring
- *       The MCU is put on a low power mode.
- */
-void enter_deep_sleep(void) {
-    //------------------------ RF to sleep
-    enter_light_sleep();
-
-    //------------------------ Turn off USB if not used
-    /*
-    if (dev_info.link_mode != LINK_USB) {
-        f_usb_deinit = 1;
-        m_deinit_usb_072();
-    }
-    */
-#if !defined(DISABLE_MCU_SLEEP)
-    
-    // Close timer
-    if (tim6_enabled) TIM_Cmd(TIM6, DISABLE);
-
-    //------------------------ Configure WakeUp Key
-
-    for (uint8_t i = 0; i < MATRIX_COLS; ++i) {
-        gpio_set_pin_output_push_pull(col_pins[i]);
-        gpio_write_pin_high(col_pins[i]);
-    }
-    for (uint8_t i = 0; i < MATRIX_ROWS; ++i) {
-        gpio_set_pin_input_low(row_pins[i]);
-    }
-
+void interrupt_source_init(void) {
     // Configure interrupt source - all 5 rows of the keyboard.
     SYSCFG_EXTILineConfig(EXTI_PORT_R0, EXTI_PIN_R0);
     SYSCFG_EXTILineConfig(EXTI_PORT_R1, EXTI_PIN_R1);
@@ -134,7 +106,7 @@ void enter_deep_sleep(void) {
     m_exti.EXTI_Line    = 0XFFFF; // GPIO 0-15
     m_exti.EXTI_LineCmd = ENABLE;
     m_exti.EXTI_Mode    = EXTI_Mode_Interrupt;
-    m_exti.EXTI_Trigger = EXTI_Trigger_Falling;
+    m_exti.EXTI_Trigger = EXTI_Trigger_Rising_Falling; // press = rising (cols high, rows pulled down)
     EXTI_Init(&m_exti);
 
     NVIC_InitTypeDef NVIC_InitStructure;
@@ -146,9 +118,41 @@ void enter_deep_sleep(void) {
     NVIC_Init(&NVIC_InitStructure);
     NVIC_InitStructure.NVIC_IRQChannel = EXTI2_3_IRQn;
     NVIC_Init(&NVIC_InitStructure);
+}
 
+/**
+ * @brief  Enter deep sleep
+ * @note This is Nuphy's un-released logic with some cleanup/refactoring
+ *       The MCU is put on a low power mode.
+ */
+void enter_deep_sleep(void) {
+    //
+    //------------------------ preventive restart
+    sleep_count += 1;
+    if (sleep_count > 100) { soft_reset_keyboard(); }
 
-    // led_pwr_sleep_handle();
+    //------------------------ RF to sleep
+    enter_light_sleep();
+
+    //------------------------ Configure WakeUp Key
+
+#if !defined(DISABLE_MCU_SLEEP)
+    // Close timer
+    if (tim6_enabled) TIM_Cmd(TIM6, DISABLE);
+ 
+    // user_config.debounce_ms       = DEBOUNCE;
+    // user_config.debounce_type     = 1;
+
+    for (uint8_t i = 0; i < MATRIX_COLS; ++i) {
+        gpio_set_pin_output_push_pull(col_pins[i]);
+        gpio_write_pin_high(col_pins[i]);
+    }
+    for (uint8_t i = 0; i < MATRIX_ROWS; ++i) {
+        gpio_set_pin_input_low(row_pins[i]);
+    }
+
+    // Configure interrupt source - all 5 rows of the keyboard.
+    interrupt_source_init();
 
     gpio_set_pin_output_push_pull(DEV_MODE_PIN);
     gpio_write_pin_low(DEV_MODE_PIN);
@@ -161,16 +165,12 @@ void enter_deep_sleep(void) {
     gpio_set_pin_output_push_pull(A12);
     gpio_write_pin_low(A12);
 
-    // removed because we want to skip the RF module sleep for now
-    /*
-    gpio_set_pin_input_high(NRF_BOOT_PIN);
-
-    gpio_set_pin_output_push_pull(NRF_WAKEUP_PIN);
-    gpio_write_pin_high(NRF_WAKEUP_PIN);
-   */
+    break_all_key();
 
     // Enter low power mode and wait for interrupt signal
     PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+    // PWR_EnterSTOPMode(PWR_Regulator_ON, PWR_STOPEntry_WFI);
+    //
 #endif
 }
 
@@ -190,28 +190,36 @@ void exit_light_sleep(bool stm32_init) {
 
     // Reinitialize the system clock
     if (stm32_init) {
-        stm32_clock_init();
+        stm32_clock_init(); 
         if (tim6_enabled) { TIM_Cmd(TIM6, ENABLE); }
     }
 
-    // Handshake send to wake RF
-    // uart_send_cmd(CMD_HAND, 0, 1);
-    // uart_send_cmd(CMD_RF_STS_SYSC, 1, 1);
+    // Tell the RF module to resume/reconnect right away (stock nuphy does this on every wake)
+    uart_send_cmd(CMD_HAND, 0, 1);
 
-    if (f_usb_deinit || dev_info.link_mode == LINK_USB) {
+    // USB remote wakeup (from nuphy 2.1.5). QMK's own suspend/wakeup loop is
+    // compiled out by no_startup_check, so the keyboard has to do it here.
+    if (dev_info.link_mode == LINK_USB && USB_DRIVER.state == USB_SUSPENDED && (USB_DRIVER.status & 2U /* remote wakeup enabled */)) {
         usb_lld_wakeup_host(&USB_DRIVER);
-        restart_usb_driver(&USB_DRIVER);
-        f_usb_deinit = 0;
+        wait_ms(50);
+        uint8_t timeout = 10;
+        while (USB_DRIVER.state == USB_SUSPENDED && timeout--) {
+            usbWakeupHost(&USB_DRIVER);
+            restart_usb_driver(&USB_DRIVER);
+            wait_ms(50);
+        }
+        break_all_key();
     }
-
 }
+
 
 void matrix_scan_repeat(uint8_t repeat) {
     do {
-        __asm__ __volatile__("nop;nop;nop;nop;nop;nop;\n\t" ::: "memory"); //nop nop
+        NOP_WAIT;
         matrix_scan();
     } while (repeat--);
 }
+
 
 /**
  * @brief Wake up from deep sleep
@@ -219,40 +227,35 @@ void matrix_scan_repeat(uint8_t repeat) {
  *       This is mostly Nuphy's unreleased logic with cleanup/refactoring by me.
  */
 void exit_deep_sleep(void) {
-
+ 
     // Matrix initialization & Scan
-    // extern void matrix_init_pins(void);
-    // matrix_init_pins();
     extern void matrix_init_custom(void);
     matrix_init_custom();
-
+    clear_report_buffer_and_queue();
     matrix_scan_repeat(2);
 
-#if !defined(DISABLE_MCU_SLEEP)
     // m_uart_gpio_set_low_speed();
 
+#if !defined(DISABLE_MCU_SLEEP)
     // Restore IO to working status
     gpio_set_pin_input_high(DEV_MODE_PIN); // PC0
     gpio_set_pin_input_high(SYS_MODE_PIN); // PC1
 
     gpio_set_pin_input_high(A11);
     gpio_set_pin_input_high(A12);
-    /* set RF module boot pin high */
-    // gpio_set_pin_input_high(NRF_BOOT_PIN);
+
 
     /* Wake RF module */
     gpio_set_pin_output_push_pull(NRF_WAKEUP_PIN);
     gpio_write_pin_high(NRF_WAKEUP_PIN);
 
-    // Flag for RF state.
+    /* Flag gor RF state */
     dev_info.rf_state = RF_LINKING;
     rf_disconnect_delay = UINT8_MAX;
     rf_linking_time     = 0;
 
-    // wait_us(1);
-#endif
-
     exit_light_sleep(true);
+#endif
 }
 
 void led_pwr_sleep_handle(void) {
@@ -268,8 +271,12 @@ void pwr_led_off(void) {
     // LED power supply off
     gpio_set_pin_output_push_pull(DC_BOOST_PIN);
     gpio_write_pin_low(DC_BOOST_PIN);
-    gpio_set_pin_input(RGB_DRIVER_SDB1);
-    gpio_set_pin_input(RGB_DRIVER_SDB2);
+    // drive SDB low (hardware shutdown) like stock nuphy; a floating input
+    // may leave the IS31FL3733s out of shutdown and drawing current
+    gpio_set_pin_output_push_pull(RGB_DRIVER_SDB1);
+    gpio_write_pin_low(RGB_DRIVER_SDB1);
+    gpio_set_pin_output_push_pull(RGB_DRIVER_SDB2);
+    gpio_write_pin_low(RGB_DRIVER_SDB2);
     rgb_led_on = 0;
 #if !defined(NO_DEBUG)
     dprint("RGB LED State: OFF\n");
@@ -379,7 +386,7 @@ void EXTI_StructInit(EXTI_InitTypeDef *EXTI_InitStruct) {
     EXTI_InitStruct->EXTI_LineCmd = DISABLE;
 }
 
-
+//#if (0)
 void mcu_timer6_init(void) {
     NVIC_InitTypeDef        NVIC_InitStructure;
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
@@ -416,9 +423,11 @@ void mcu_timer6_init(void) {
  TIM6 handler is triggered by the timer above which is used as an interrupt.
  This is every 1ms so it effectively puts the CPU sleep mode only for 1s.
 */
+// volatile uint8_t idle_sleep_cnt = 0;
 OSAL_IRQ_HANDLER(STM32_TIM6_HANDLER) {
     if (TIM_GetFlagStatus(TIM6, TIM_FLAG_Update) != ST_RESET) {
         TIM_ClearFlag(TIM6, TIM_FLAG_Update);
+        // idle_sleep_cnt++;
     }
 }
 
@@ -429,3 +438,4 @@ void idle_enter_sleep(void) {
     TIM6->CNT      = 0;
     PWR_EnterSleepMode(PWR_SLEEPEntry_WFI);
 }
+//#endif

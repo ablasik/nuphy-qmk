@@ -199,7 +199,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                     uart_send_cmd(CMD_SET_LINK, 10, 20);
                 }
                 for (uint8_t i = 1; i <= 4; i++) {
-                    rgb_matrix_set_color(led_idx.KC_GRV + i, RGB_OFF);
+                    rgb_matrix_set_color(led_idx.NUM[i - 1], RGB_OFF);
                 }
                 rgb_matrix_update_pwm_buffers();
             }
@@ -347,7 +347,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             f_bat_num_show = record->event.pressed;
             if (!f_bat_num_show) {
                 for (uint8_t i = 1; i < 11; i++) {
-                    rgb_matrix_set_color(led_idx.KC_GRV + i, RGB_OFF);
+                    rgb_matrix_set_color(led_idx.NUM[i - 1], RGB_OFF);
                 }
                 rgb_matrix_update_pwm_buffers();
             }

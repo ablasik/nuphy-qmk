@@ -13,7 +13,7 @@
         "command": false,
         "console": true,
         "extrakey": true,
-        "key_lock": false,
+        "key_lock": true,
         "mousekey": true,
         "nkro": true,
         "rgb_matrix": true
@@ -115,8 +115,7 @@
           "starlight": true,
           "starlight_dual_hue": true,
           "starlight_dual_sat": true,
-          "riverflow": true,
-          "effect_max": true
+          "riverflow": true
         },
         "layout": [
             {"matrix": [0, 0], "x": 0, "y": 0, "flags": 4},

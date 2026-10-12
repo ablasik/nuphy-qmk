@@ -49,9 +49,9 @@
 					"Cycle All",
 					"Cycle Left/Right",
 					"Cycle Up/Down",
+					"Rainbow Moving Chevron",
 					"Cycle Out/In",
 					"Cycle Out/In Dual",
-					"Rainbow Moving Chevron",
 					"Cycle Pinwheel",
 					"Cycle Spiral",
 					"Dual Beacon",
@@ -63,9 +63,9 @@
 					"Hue Breathing",
 					"Hue Pendulum",
 					"Hue Wave",
-					"Pixel Fractal",
-					"Pixel Flow",
 					"Pixel Rain",
+					"Pixel Flow",
+					"Pixel Fractal",
 					"Typing Heatmap",
 					"Digital Rain",
 					"Reactive Simple",
@@ -81,10 +81,9 @@
 					"Solid Splash",
 					"Solid MultiSplash",
 					"Starlight",
-					"Starlight Dual Hue",
 					"Starlight Dual Sat",
+					"Starlight Dual Hue",
 					"Riverflow",
-					"Effect Max",
 					"Game Mode"
 				]
 			},
@@ -289,6 +288,26 @@
 			"name": "SOCD\nToggle",
 			"title": "SOCD Toggle",
 			"shortName": "Socd_Tog"
+		},
+		{
+			"name": "Mac/Win\nToggle",
+			"title": "Mac/Win layout for the current connection",
+			"shortName": "MacWin_Tg"
+		},
+		{
+			"name": "Previous\nDevice",
+			"title": "Switch back to the previous wireless device",
+			"shortName": "Link_Prev"
+		},
+		{
+			"name": "Lock\nScreen",
+			"title": "Lock the computer (Ctrl+Cmd+Q on Mac, Win+L on Windows)",
+			"shortName": "Lock_Scr"
+		},
+		{
+			"name": "F-keys\nMedia",
+			"title": "Swap F1-F12 and media keys on the top row, for the current connection",
+			"shortName": "FRow_Swap"
 		}
 	]
 }

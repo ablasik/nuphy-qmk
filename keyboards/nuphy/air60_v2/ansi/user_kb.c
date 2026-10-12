@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "user_kb.h"
+#include "os_detection.h"
 #include "ansi.h"
 #include "mcu_pwr.h"
 #include "color.h"
@@ -35,15 +36,22 @@ bool game_mode_enable    = 0;
 bool f_send_channel      = 0;
 bool f_dial_sw_init_ok   = 0;
 bool f_bat_num_show      = 0;
+bool rgb_power_save      = 0;
 
 uint8_t        rgb_required            = 0;
 uint8_t        rf_blink_cnt            = 0;
 uint8_t        rf_sw_temp              = 0;
+uint8_t        prev_rf_link            = 0xFF; // last wireless link before the current one
 uint8_t        host_mode               = 0;
+uint8_t        rgb_interval            = 0;
+uint8_t        delay_step_timer        = 0;
+uint8_t        long_press_timer        = 0;
+uint16_t       side_one_timer          = 0;
 uint16_t       rf_linking_time         = 0;
 uint16_t       rf_link_show_time       = 0;
 uint32_t       no_act_time             = 0;
 uint16_t       f_rf_sw_press           = 0;
+uint16_t       f_rf_dfu_press          = 0;
 uint16_t       f_rgb_test_press        = 0;
 uint16_t       f_dev_reset_press       = 0;
 uint16_t       f_caps_word_tg          = 0;
@@ -60,6 +68,7 @@ uint32_t       sleep_show_timer        = 0;
 
 uint16_t       left_pressed            = 0;
 uint16_t       right_pressed           = 0;
+
 
 host_driver_t *m_host_driver           = 0;
 
@@ -104,11 +113,9 @@ void set_link_mode(void) {
 /**
  * @brief  long press key process.
  */
-void custom_key_press(void) {
-    static uint32_t long_press_timer = 0;
-
-    if (timer_elapsed32(long_press_timer) < 100) { return; }
-    long_press_timer = timer_read32();
+void user_key_press(void) {
+    if (long_press_timer < 10) { return; }
+    long_press_timer = 0;
 
     dial_sw_scan();
 
@@ -125,7 +132,7 @@ void custom_key_press(void) {
                 if (f_rf_new_adv_ok) { break; }
             }
         }
-    }
+    } 
 
     // The device is restored to factory Settings
     if (f_dev_reset_press) {
@@ -190,6 +197,13 @@ void custom_key_press(void) {
         }
     }
 
+    // SnapTap Function
+
+    if (left_pressed)  {  left_pressed++; }
+    if (right_pressed) { right_pressed++; }
+
+    // Toggle Caps Word
+
     if (f_caps_word_tg) {
         f_caps_word_tg++;
         if (f_caps_word_tg > SMALL_PRESS_DELAY) {
@@ -198,7 +212,22 @@ void custom_key_press(void) {
 #ifndef NO_DEBUG
             dprintf("caps_word_state: %s\n", user_config.caps_word_enable ? "ON" : "OFF");
 #endif
-            signal_rgb_led(user_config.caps_word_enable, 1, led_idx.KC_CAPS, UINT8_MAX, CAPS_WORD_IDLE_TIMEOUT);
+            signal_rgb_led(user_config.caps_word_enable * 3, led_idx.KC_CAPS, UINT8_MAX, CAPS_WORD_IDLE_TIMEOUT);
+        }
+    }
+
+    // Toggle RF Delay
+    if (f_rf_dfu_press) {
+        f_rf_dfu_press++;
+        if (f_rf_dfu_press > MEDIUM_PRESS_DELAY) {
+            f_rf_dfu_press = 0;
+            // RF DFU over a wireless link would just kill that link (stock nuphy: USB only)
+            if (dev_info.link_mode != LINK_USB) { return; }
+#ifndef NO_DEBUG
+            dprintf("RF DFU Mode Enabled\n");
+#endif
+            uart_send_cmd(CMD_RF_DFU, 10, 20);
+            signal_rgb_led(9, led_idx.RF_DFU, UINT8_MAX, UINT16_MAX);
         }
     }
 
@@ -208,9 +237,11 @@ void custom_key_press(void) {
  * @brief  Release all keys, clear keyboard report.
  */
 void break_all_key(void) {
-    clear_keyboard();
+    // Drop stale queued reports first, then release: the release must be sent
+    // (and kept in the repeat buffer), not wiped by the clear.
     void clear_report_buffer_and_queue(void);
     clear_report_buffer_and_queue();
+    clear_keyboard();
 }
 
 /**
@@ -268,15 +299,38 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
         }
     }
 
-    if (dial_scan & 0x02) {
-        if (dev_info.sys_sw_state != SYS_SW_WIN) {
-            if (led_sys_show) { sys_show_timer = timer_read32(); }
-            default_layer_set(1 << WIN_BASE);
-            dev_info.sys_sw_state = SYS_SW_WIN;
-            keymap_config.nkro    = 1;
-            reset_led_idx();
+    // Mac/Win is remembered per link (USB, BT1-3, 2.4G). Moving the dial sets it
+    // for the current link; switching links restores that link's setting.
+    static uint8_t last_dial = 0xFF, last_link = 0xFF;
+    uint8_t dial_os   = (dial_scan & 0x02) ? SYS_SW_MAC : SYS_SW_WIN;
+    uint8_t link_bit  = 1 << dev_info.link_mode;
+    bool    dial_moved = last_dial != 0xFF && dial_os != last_dial;
+
+    if (user_config.link_valid != LINK_CFG_VALID) {
+        user_config.link_os       = dial_os == SYS_SW_WIN ? 0x1F : 0x00;
+        user_config.link_frow     = 0; // top row as printed on every link
+        user_config.link_valid    = LINK_CFG_VALID;
+        eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
+    } else if (dial_moved) {
+        if (dial_os == SYS_SW_WIN) {
+            user_config.link_os |= link_bit;
+        } else {
+            user_config.link_os &= ~link_bit;
         }
-    } else {
+        eeconfig_update_kb_datablock_field(user_config, link_os);
+    }
+    last_dial = dial_os;
+
+    // sys_sw_state == 0 forces a re-apply (factory reset does this)
+    if (dev_info.link_mode != last_link && last_link != 0xFF && last_link != LINK_USB && dev_info.link_mode != LINK_USB) {
+        prev_rf_link = last_link; // for LINK_PREV
+    }
+    if (!dial_moved && dev_info.link_mode == last_link && dev_info.sys_sw_state != 0) { return; }
+    // show the restored OS on link changes too, so the user sees what's active
+    led_sys_show = led_sys_show && last_link != 0xFF;
+    last_link    = dev_info.link_mode;
+
+    if (!(user_config.link_os & link_bit)) {
         if (dev_info.sys_sw_state != SYS_SW_MAC) {
             if (led_sys_show) { sys_show_timer = timer_read32(); }
             default_layer_set(1 << MAC_BASE);
@@ -284,7 +338,82 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
             keymap_config.nkro    = 0;
             reset_led_idx();
         }
+    } else {
+        if (dev_info.sys_sw_state != SYS_SW_WIN) {
+            if (led_sys_show) { sys_show_timer = timer_read32(); }
+            default_layer_set(1 << WIN_BASE);
+            dev_info.sys_sw_state = SYS_SW_WIN;
+            keymap_config.nkro    = 1;
+            reset_led_idx();
+        }
     }
+}
+
+/**
+ * @brief  Switch back to the previous wireless device (same as tapping Fn+1..4).
+ */
+void link_prev(void) {
+    if (dev_info.link_mode == LINK_USB || prev_rf_link > LINK_BT_3 || prev_rf_link == dev_info.link_mode) { return; }
+    break_all_key();
+    rf_sw_temp = prev_rf_link;
+    set_link_mode();
+    uart_send_cmd(CMD_SET_LINK, 10, 20);
+}
+
+/**
+ * @brief  On the cable the host OS is detected: set the USB link's layout to
+ *         match (Linux counts as Windows). The dial or Fn+M+W can still flip it.
+ */
+bool process_detected_host_os_kb(os_variant_t os) {
+    if (!process_detected_host_os_user(os)) { return false; }
+    if (os == OS_UNSURE) { return true; }
+    if (os == OS_MACOS || os == OS_IOS) {
+        user_config.link_os &= ~(1 << LINK_USB);
+    } else {
+        user_config.link_os |= 1 << LINK_USB;
+    }
+    if (dev_info.link_mode == LINK_USB) { dev_info.sys_sw_state = 0; } // dial_set() re-applies it
+    return true;
+}
+
+/**
+ * @brief  Per-link top row swap: when set, the F1-F12 positions read the key from
+ *         the other layer of the pair (base <-> Fn), so plain = F-keys on Mac or
+ *         plain = media on Windows. Works with VIA remaps of either layer.
+ */
+#ifdef FROW_COL_F1 // matrix columns of F1 and F12 on row 0; boards without an F row leave it out
+uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
+    if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) { return KC_NO; }
+    bool frow = key.row == 0 && key.col >= FROW_COL_F1 && key.col <= FROW_COL_F12;
+    if (frow && (user_config.link_frow & (1 << dev_info.link_mode))) {
+        if (layer == MAC_BASE || layer == WIN_BASE) {
+            layer++;
+        } else if (layer == MAC_FN || layer == WIN_FN) {
+            layer--;
+        }
+    }
+    return keycode_at_keymap_location(layer, key.row, key.col);
+}
+#endif
+
+void toggle_link_frow(void) {
+#ifdef FROW_COL_F1
+    user_config.link_frow ^= 1 << dev_info.link_mode;
+    eeconfig_update_kb_datablock_field(user_config, link_frow);
+    // F1-F12 glow: white = F-keys first now, blue = media first (colour_lib 9 / 6)
+    bool fkeys = user_config.link_frow & (1 << dev_info.link_mode);
+    uint8_t a = g_led_config.matrix_co[0][FROW_COL_F1], b = g_led_config.matrix_co[0][FROW_COL_F12];
+    signal_rgb_led(fkeys ? 9 : 6, MIN(a, b), MAX(a, b), 2000);
+#endif
+}
+
+/**
+ * @brief  flip Mac/Win for the current link (same as moving the dial).
+ */
+void toggle_link_os(void) {
+    user_config.link_os ^= 1 << dev_info.link_mode;
+    eeconfig_update_kb_datablock_field(user_config, link_os);
+    dev_info.sys_sw_state = 0; // dial_set() re-applies it and shows the indicator
 }
 
 /**
@@ -305,7 +434,7 @@ void dial_sw_scan(void) {
         f_wakeup_prepare = 0;
 
         dial_save         = dial_scan;
-        debounce          = 5;
+        debounce          = 10;
         f_dial_sw_init_ok = 0;
         return;
     } else if (debounce) {
@@ -352,15 +481,14 @@ uint8_t get_array_idx(uint8_t *array, uint8_t size, uint16_t elm) {
     return UINT8_MAX;
 }
 
-
 /**
  * @brief  timer process.
  */
 void timer_pro(void) {
     static uint32_t interval_timer = 0;
-    static bool     f_first        = true;
     static uint16_t missing_time   = 0;
     static uint16_t adjust_time    = 0;
+    static bool     f_first        = true;
 
     if (f_first) {
         f_first        = false;
@@ -370,6 +498,7 @@ void timer_pro(void) {
 
     // step 10ms
     if (timer_elapsed32(interval_timer) < 10) { return; }
+
     if (!game_mode_enable && no_act_time >= 1000 ) {
         missing_time += (timer_elapsed32(interval_timer) - 10);
         if (missing_time >= 100 && no_act_time % 3000 != 0) {
@@ -386,15 +515,22 @@ void timer_pro(void) {
 
     if (rf_linking_time < UINT16_MAX) { rf_linking_time += adjust_time + 1; }
 
-    adjust_time = 0;
+    if (rgb_interval < UINT8_MAX) { rgb_interval++; }
 
+    if (delay_step_timer < UINT8_MAX) { delay_step_timer++; }
+
+    if (long_press_timer < UINT8_MAX) { long_press_timer++; }
+
+    if (side_one_timer < UINT16_MAX) { side_one_timer += adjust_time + 1; }
+
+    adjust_time = 0;
 }
 
 /**
  * @brief  load eeprom data.
  */
 void load_eeprom_data(void) {
-    eeconfig_read_kb_datablock(&user_config);
+    eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config));
     if (user_config.init_layer < 100) { user_config_reset(); }
 }
 
@@ -414,7 +550,7 @@ void delay_update_eeprom_data(void) {
     if (timer_elapsed32(eeprom_update_timer) < (1000 * 30)) { return; }
     if (user_update) {
         if (game_mode_enable) {
-            eeconfig_read_kb_datablock(&read_user_config);
+            eeconfig_read_kb_datablock(&read_user_config, 0, sizeof(read_user_config));
             read_user_config.game_rgb_val       = rgb_matrix_config.hsv.v;
             read_user_config.game_rgb_hue       = rgb_matrix_config.hsv.h;
             read_user_config.game_rgb_sat       = rgb_matrix_config.hsv.s;
@@ -424,9 +560,9 @@ void delay_update_eeprom_data(void) {
             read_user_config.game_debounce_ms   = user_config.debounce_ms;
             read_user_config.game_debounce_type = user_config.debounce_type;
 
-            eeconfig_update_kb_datablock(&read_user_config);
+            eeconfig_update_kb_datablock(&read_user_config, 0, sizeof(read_user_config));
         } else {
-            eeconfig_update_kb_datablock(&user_config);
+            eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
         }
 
         user_update         = 0;
@@ -435,7 +571,7 @@ void delay_update_eeprom_data(void) {
 #endif
     }
     if (rgb_update) {
-        eeconfig_update_rgb_matrix();
+        eeconfig_force_flush_rgb_matrix();
         rgb_update          = 0;
 #ifndef NO_DEBUG
         dprint("Updating EEPROM:  rgb_config\n");
@@ -450,14 +586,14 @@ void game_mode_tweak(void)
         if (eeprom_update_timer != 0) {
             eeprom_update_timer = 0;
             if (user_update) {
-                eeconfig_update_kb_datablock(&user_config);
+                eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
                 user_update = 0;
 #ifndef NO_DEBUG
                 dprint("Updating EEPROM: user_config\n");
 #endif
             }
             if (rgb_update) {
-                eeconfig_update_rgb_matrix();
+                eeconfig_force_flush_rgb_matrix();
                 rgb_update          = 0;
 #ifndef NO_DEBUG
                 dprint("Updating EEPROM:  rgb_config\n");
@@ -479,15 +615,16 @@ void game_mode_tweak(void)
         if (user_config.numlock_state != 0) { user_config.numlock_state = 1; }
     } else {
         rgb_matrix_reload_from_eeprom();
-        eeconfig_read_kb_datablock(&user_config);
+        eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config));
     }
+    // signal_rgb_led(game_mode_enable, G_LED, G_LED, 2000);
 #ifndef NO_DEBUG
     dprintf("debounce:      %dms\n", user_config.debounce_ms);
     dprintf("debounce type: %s\n", debounce_algo[user_config.debounce_type]);
 #endif
 
     pwr_led_on();
-    signal_rgb_led(game_mode_enable, 1, led_idx.KC_G, UINT8_MAX, 2000);
+    signal_rgb_led(game_mode_enable * 3, led_idx.KC_G, UINT8_MAX, 2000);
 }
 
 void reset_led_idx(void) {
@@ -502,18 +639,19 @@ void reset_led_idx(void) {
 
     led_idx.KC_D     = get_led_idx(DEBOUNCE_T);
     led_idx.KC_G     = get_led_idx(GAME_MODE);
-    led_idx.KC_F1    = get_led_idx(KC_1);
+    led_idx.KC_F1    = get_led_idx(KC_1); // no F row: level bars use the number row
     led_idx.RF_DFU   = get_led_idx(RF_DFU);
     led_idx.SOCD_TOG = get_led_idx(SOCD_TOG);
-    led_idx.KC_TAB   = get_led_idx(KC_TAB);
+    led_idx.KC_F12   = get_led_idx(KC_F12);
+    for (uint8_t i = 0; i < 10; i++) { led_idx.NUM[i] = get_led_idx(KC_1 + i); } // KC_1..KC_0
 }
 
 uint8_t get_led_idx(uint16_t keycode) {
     uint8_t current_default = dev_info.sys_sw_state == SYS_SW_WIN ? WIN_BASE : MAC_BASE;
-    uint8_t check_layers[4] = { current_default, (current_default + 1), (current_default + 2), M_LAYER };
+    uint8_t check_layers[3] = { current_default, (current_default + 1), M_LAYER };
     for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
         for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
-            for (uint8_t layer = 0; layer < 4; ++layer) {
+            for (uint8_t layer = 0; layer < 3; ++layer) {
                 if (keycode_at_keymap_location(check_layers[layer], row, col) == keycode) {
                     return g_led_config.matrix_co[row][col];
                 }
@@ -555,47 +693,45 @@ uint8_t step_helper(uint8_t dir, uint8_t value) {
         end_led  = 9;
     }
 
-    signal_rgb_led(my_color, 0, led_idx.KC_F1, led_idx.KC_F1 + end_led, 3000);
+    signal_rgb_led(my_color, led_idx.KC_F1, led_idx.KC_F1 + end_led, 3000);
     return value;
 }
 
 void debounce_type(void) {
-    if (user_config.debounce_type == 2) { user_config.debounce_type = 0; }
-    else { user_config.debounce_type++; }
+    user_config.debounce_type = (user_config.debounce_type + 1) % 3;
 
 #ifndef NO_DEBUG
     dprintf("debounce type: %s\n", debounce_algo[user_config.debounce_type]);
 #endif
-    signal_rgb_led(user_config.debounce_type == 1 ? 3 : user_config.debounce_type, 0, led_idx.KC_D, UINT8_MAX, 3000);
+    signal_rgb_led(user_config.debounce_type == 1 ? 3 : user_config.debounce_type, led_idx.KC_D, UINT8_MAX, 3000);
+    side_toast(user_config.debounce_type + 1, 3, IND_WHITE); // 1-3 of 3
 }
-
 
 #ifndef NO_DEBUG
 void user_debug(void) {
     static uint32_t last_print = 0;
-    if (no_act_time == 0 || no_act_time == last_print) { return; }
-    if (no_act_time % 3000 == 0) {
-        if (!USB_ACTIVE && debug_enable) {
-            debug_enable = false;
-            print("DEBUG: disabled.\n");
-        }
-
-        last_print = no_act_time;
-        dprintf("no_act_time: %lds\n", no_act_time / 100);
+    if (no_act_time == 0 || no_act_time == last_print || no_act_time % 3000 != 0) { return; }
+    if (!USB_ACTIVE && debug_enable) {
+        debug_enable = false;
+        print("DEBUG: disabled.\n");
     }
+
+    last_print = no_act_time;
+    dprintf("no_act_time: %lds\n", no_act_time / 100);
 }
 #endif
 
+
+// or create week functios for user_config reset and game_config reset
 /**
  * @brief User config to default setting.
  */
 void user_config_reset(void) {
     /* first power on, set rgb matrix brightness at middle level*/
-    // rgb_matrix_sethsv(RGB_HUE_INIT, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS - RGB_MATRIX_VAL_STEP * 2);
 
-    user_config.init_layer              = 100;
+    user_config.init_layer              = 100 + DEFAULT_LAYER;
     user_config.ee_side_mode            = 0;
-    user_config.ee_side_light           = 1;
+    user_config.ee_side_light           = 4; // 96/255, same as stock nuphy default
     user_config.ee_side_speed           = 2;
     user_config.ee_side_rgb             = 1;
     user_config.ee_side_colour          = 0;
@@ -608,14 +744,16 @@ void user_config_reset(void) {
     user_config.caps_word_enable        = 1;
     user_config.numlock_state           = 1;
     user_config.socd_mode               = 0;
+    user_config.link_valid              = 0; // re-seed per-link settings from the dial
+    user_config.rf_delay_step           = 2;
     keymap_config.no_gui                = 0;
-    game_config_reset(0);
     user_config_override();
-    eeconfig_update_kb_datablock(&user_config);
+    game_config_reset(0);
+    eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
 }
 
 void game_config_reset(uint8_t save_to_eeprom) {
-    if (save_to_eeprom) { eeconfig_read_kb_datablock(&user_config); }
+    if (save_to_eeprom) { eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config)); }
     user_config.game_side_colour       = SIDE_MATRIX_GAME_MODE;
     user_config.game_side_light        = 2;
     user_config.game_rgb_mod           = RGB_MATRIX_GAME_MODE;
@@ -625,7 +763,7 @@ void game_config_reset(uint8_t save_to_eeprom) {
     user_config.game_debounce_ms       = DEBOUNCE;
     user_config.game_debounce_type     = 1;
     game_config_override();
-    if (save_to_eeprom) { eeconfig_update_kb_datablock(&user_config); }
+    if (save_to_eeprom) { eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config)); }
 }
 
 /**
@@ -633,37 +771,49 @@ void game_config_reset(uint8_t save_to_eeprom) {
  * @note Turn off LEDs if not used to save some power. This is ported
  *       from older Nuphy leaks.
  */
+void power_save(void) {
+    static uint32_t power_check_timer      = 0;
+    if (timer_elapsed32(power_check_timer) < 5000) { return; }
+    power_check_timer = timer_read32();
 
-void matrix_io_delay(void) {
-    if (MATRIX_IO_DELAY == 0 || game_mode_enable == 1 || f_rf_sleep) {
-        __asm__ __volatile__("nop;nop;nop;nop;nop;nop;nop;nop;\n\t" ::: "memory");  // sleep 0.415 us (415 ns)
-        return;
+    // +5% hysteresis so a reading jittering around the threshold doesn't toggle LEDs
+    if (dev_info.rf_battery > low_bat_level + 5 && rgb_power_save == 1) {
+        if (game_mode_enable) {
+            rgb_matrix_config.hsv.v = user_config.game_rgb_val;
+            user_config.ee_side_light = user_config.game_side_light;
+        } else {
+            rgb_matrix_reload_from_eeprom();
+            eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config));
+        }
+        rgb_power_save = 0;
+    } else if ((rgb_matrix_config.hsv.v > 0 || user_config.ee_side_light > 1) && dev_info.rf_battery < low_bat_level) {
+        rgb_matrix_config.hsv.v   = 0;
+        user_config.ee_side_light = 1;
+        rgb_power_save            = 1;
     }
-
-    uint16_t io_wait = MATRIX_IO_DELAY;
-    if (no_act_time > 3000) { io_wait += 200; }
-    wait_us(io_wait);
 }
 
 void led_power_handle(void) {
-    static uint32_t interval    = 0;
     static uint8_t led_debounce = 4;
-    uint16_t led_interval = rgb_required == 1 ? 100 : 500;
 
-    if (timer_elapsed32(interval) < led_interval || f_wakeup_prepare || game_mode_enable) { // only check once in a while, less flickering for unhandled cases
+    uint16_t led_interval = rgb_required == 1 ? 10 : 50;
+
+    if (rgb_interval < led_interval || f_wakeup_prepare || game_mode_enable) {
         return;
     }
 
-    if (rgb_matrix_is_enabled() && (rgb_matrix_get_val() != 0 || !is_side_rgb_off() || rgb_required > 0)) { 
+
+    extern bool key_light_idle_off;
+    if (rgb_matrix_is_enabled() && ((rgb_matrix_get_val() != 0 && !key_light_idle_off) || !is_side_is31fl3733_off() || rgb_required > 0)) { 
         rgb_required = 0;
         led_debounce = 4;
         pwr_led_on();
     } else if (led_debounce--) {
-        interval = timer_read32();
+        rgb_interval = 0;
         return;
-    } else if (timer_elapsed32(interval) > 500) { // brightness is 0 or RGB off.
+    } else if (rgb_interval > 50) { // brightness is 0 or RGB off.
         pwr_led_off();
     }
 
-    interval = timer_read32();
+    rgb_interval = 0;
 }

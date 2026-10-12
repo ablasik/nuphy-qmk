@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "matrix.h"
 #include "debounce.h"
 #include "quantum.h"
+#include "user_kb.h"
 
 #define rowA_bits (PAL_PORT_BIT(PAL_PAD(A0)) | PAL_PORT_BIT(PAL_PAD(A1)) | PAL_PORT_BIT(PAL_PAD(A2)) | PAL_PORT_BIT(PAL_PAD(A3)))
 #define rowC_bits (PAL_PORT_BIT(PAL_PAD(C14)) | PAL_PORT_BIT(PAL_PAD(C15)))
@@ -40,7 +41,6 @@ extern matrix_row_t matrix[MATRIX_ROWS];     // debounced values
 static inline matrix_row_t read_cols(void) {
     uint16_t portA_pin_state = palReadPort(PAL_PORT(A0));
     uint16_t portB_pin_state = palReadPort(PAL_PORT(B0));
-    //uint16_t portC_pin_state = palReadPort(PAL_PORT(C0));
     return ((((portA_pin_state & 0b11110000) ^ 0b11110000) >> 4) | (((portB_pin_state & 0b11) ^ 0b11) << 4) | (((portB_pin_state & 0b1111110000000000) ^ 0b1111110000000000) >> 4) | (((portA_pin_state & 0b11100000000) ^ 0b11100000000) << 4) | ((portA_pin_state & 0b1000000000000000) ^ 0b1000000000000000) | (((portB_pin_state & 0b1000) ^ 0b1000) << 13));
 }
 
@@ -57,14 +57,33 @@ static inline void select_row(uint8_t row) {
     }
 }
 
+void clear_matrix_state(void) {
+    // initialize matrix state: all keys off
+    memset(matrix, 0, sizeof(matrix));
+    memset(raw_matrix, 0, sizeof(raw_matrix));
+}
+
+// PAL_STM32_OSPEED_HIGHEST    PAL_STM32_OSPEED_MID    PAL_STM32_OSPEED_LOWEST
 void matrix_init_custom(void) {
     // initialize key pins
-    palSetGroupMode(PAL_PORT(A0), rowA_bits, 0U, (PAL_STM32_MODE_OUTPUT | PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_HIGHEST));
-    palSetGroupMode(PAL_PORT(C0), rowC_bits, 0U, (PAL_STM32_MODE_OUTPUT | PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_HIGHEST));
+    palSetGroupMode(PAL_PORT(A0), rowA_bits, 0U, (PAL_STM32_MODE_OUTPUT | PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_LOWEST));
+    palSetGroupMode(PAL_PORT(C0), rowC_bits, 0U, (PAL_STM32_MODE_OUTPUT | PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_OSPEED_LOWEST));
     palSetPort(PAL_PORT(A0), rowA_bits);
     palSetPort(PAL_PORT(C0), rowC_bits);
-    palSetGroupMode(PAL_PORT(A0), colA_bits, 0U, (PAL_STM32_MODE_INPUT | PAL_STM32_PUPDR_PULLUP | PAL_STM32_OSPEED_HIGHEST));
-    palSetGroupMode(PAL_PORT(B0), colB_bits, 0U, (PAL_STM32_MODE_INPUT | PAL_STM32_PUPDR_PULLUP | PAL_STM32_OSPEED_HIGHEST));
+    palSetGroupMode(PAL_PORT(A0), colA_bits, 0U, (PAL_STM32_MODE_INPUT | PAL_STM32_PUPDR_PULLUP | PAL_STM32_OSPEED_LOWEST));
+    palSetGroupMode(PAL_PORT(B0), colB_bits, 0U, (PAL_STM32_MODE_INPUT | PAL_STM32_PUPDR_PULLUP | PAL_STM32_OSPEED_LOWEST));
+
+    // initialize matrix state: all keys off
+    clear_matrix_state();
+}
+
+void matrix_io_delay(void) {
+    if (MATRIX_IO_DELAY == 0 || game_mode_enable == 1 || f_rf_sleep) {
+        NOP_WAIT;
+        return;
+    }
+    uint16_t io_wait = no_act_time > 3000 ? 250 : MATRIX_IO_DELAY;
+    wait_us(io_wait);
 }
 
 // Only need to scan the result into current_matrix, and return changed.

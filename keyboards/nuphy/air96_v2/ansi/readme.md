@@ -1,4 +1,4 @@
-c# NuPhy Air96 V2
+# NuPhy Air96 V2
 
 *NuPhy Air96 V2 is a standard 100 key keyboard.*
 ![NuPhy Air96 V2](https://bit.ly/41B1Hsk)

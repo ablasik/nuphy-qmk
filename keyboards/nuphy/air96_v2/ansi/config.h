@@ -26,11 +26,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_DRIVER_SDB1                     C6
 #define RGB_DRIVER_SDB2                     C7
 
-#define SERIAL_DRIVER                       SD1
-#define SD1_TX_PIN                          B6
-#define SD1_TX_PAL_MODE                     0
-#define SD1_RX_PIN                          B7
-#define SD1_RX_PAL_MODE                     0
+// RF module UART. QMK used to map SD1_* onto these; since #24855 only UART_* is read,
+// and the defaults (A9/A10) are matrix columns: ghost keypresses and garbage RF frames.
+#define UART_DRIVER                         SD1
+#define UART_TX_PIN                         B6
+#define UART_TX_PAL_MODE                    0
+#define UART_RX_PIN                         B7
+#define UART_RX_PAL_MODE                    0
 
 #if !defined(NO_DEBUG) && !defined(CONSOLE_ENABLE)
 #define NO_DEBUG
@@ -82,6 +84,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define WAIT_US_TIMER                       GPTD14
 #define EECONFIG_KB_DATA_SIZE               32
+#define FROW_COL_F1                         2 // F1..F12 on matrix row 0
+#define FROW_COL_F12                        13
 #define GPIO_INPUT_PIN_DELAY                12
 #define RF_QUEUE_SIZE                       64
 

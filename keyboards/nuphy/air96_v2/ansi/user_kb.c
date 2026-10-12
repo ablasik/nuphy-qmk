@@ -381,9 +381,10 @@ bool process_detected_host_os_kb(os_variant_t os) {
  *         the other layer of the pair (base <-> Fn), so plain = F-keys on Mac or
  *         plain = media on Windows. Works with VIA remaps of either layer.
  */
+#ifdef FROW_COL_F1 // matrix columns of F1 and F12 on row 0; boards without an F row leave it out
 uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
     if (key.row >= MATRIX_ROWS || key.col >= MATRIX_COLS) { return KC_NO; }
-    bool frow = key.row == 0 && key.col >= 2 && key.col <= 13; // F1..F12
+    bool frow = key.row == 0 && key.col >= FROW_COL_F1 && key.col <= FROW_COL_F12;
     if (frow && (user_config.link_frow & (1 << dev_info.link_mode))) {
         if (layer == MAC_BASE || layer == WIN_BASE) {
             layer++;
@@ -393,13 +394,17 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key) {
     }
     return keycode_at_keymap_location(layer, key.row, key.col);
 }
+#endif
 
 void toggle_link_frow(void) {
+#ifdef FROW_COL_F1
     user_config.link_frow ^= 1 << dev_info.link_mode;
     eeconfig_update_kb_datablock_field(user_config, link_frow);
     // F1-F12 glow: white = F-keys first now, blue = media first (colour_lib 9 / 6)
     bool fkeys = user_config.link_frow & (1 << dev_info.link_mode);
-    signal_rgb_led(fkeys ? 9 : 6, g_led_config.matrix_co[0][2], g_led_config.matrix_co[0][13], 2000);
+    uint8_t a = g_led_config.matrix_co[0][FROW_COL_F1], b = g_led_config.matrix_co[0][FROW_COL_F12];
+    signal_rgb_led(fkeys ? 9 : 6, MIN(a, b), MAX(a, b), 2000);
+#endif
 }
 
 /**
@@ -638,7 +643,7 @@ void reset_led_idx(void) {
     led_idx.RF_DFU   = get_led_idx(RF_DFU);
     led_idx.SOCD_TOG = get_led_idx(SOCD_TOG);
     led_idx.KC_F12   = get_led_idx(KC_F12);
-    led_idx.KC_GRV   = get_led_idx(KC_GRV);
+    for (uint8_t i = 0; i < 10; i++) { led_idx.NUM[i] = get_led_idx(KC_1 + i); } // KC_1..KC_0
 }
 
 uint8_t get_led_idx(uint16_t keycode) {

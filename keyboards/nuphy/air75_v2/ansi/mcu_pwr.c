@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 //------------------------------------------------
 
-static bool f_usb_deinit    = 0;
 static bool rgb_led_on      = 0;
 static bool side_led_on     = 0;
 static bool tim6_enabled    = false;
@@ -108,7 +107,7 @@ void interrupt_source_init(void) {
     m_exti.EXTI_Line    = 0XFFFF; // GPIO 0-15
     m_exti.EXTI_LineCmd = ENABLE;
     m_exti.EXTI_Mode    = EXTI_Mode_Interrupt;
-    m_exti.EXTI_Trigger = EXTI_Trigger_Falling;
+    m_exti.EXTI_Trigger = EXTI_Trigger_Rising_Falling; // press = rising (cols high, rows pulled down)
     EXTI_Init(&m_exti);
 
     NVIC_InitTypeDef NVIC_InitStructure;
@@ -195,11 +194,21 @@ void exit_light_sleep(bool stm32_init) {
         if (tim6_enabled) TIM_Cmd(TIM6, ENABLE);
     }
 
+    // Tell the RF module to resume/reconnect right away (stock nuphy does this on every wake)
+    uart_send_cmd(CMD_HAND, 0, 1);
 
-    if (f_usb_deinit) {
+    // USB remote wakeup (from nuphy 2.1.5). QMK's own suspend/wakeup loop is
+    // compiled out by no_startup_check, so the keyboard has to do it here.
+    if (dev_info.link_mode == LINK_USB && USB_DRIVER.state == USB_SUSPENDED && (USB_DRIVER.status & 2U /* remote wakeup enabled */)) {
         usb_lld_wakeup_host(&USB_DRIVER);
-        restart_usb_driver(&USB_DRIVER);
-        f_usb_deinit = 0;
+        wait_ms(50);
+        uint8_t timeout = 10;
+        while (USB_DRIVER.state == USB_SUSPENDED && timeout--) {
+            usbWakeupHost(&USB_DRIVER);
+            restart_usb_driver(&USB_DRIVER);
+            wait_ms(50);
+        }
+        break_all_key();
     }
 
 }

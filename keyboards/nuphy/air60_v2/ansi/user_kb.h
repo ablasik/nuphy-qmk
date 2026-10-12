@@ -101,32 +101,28 @@ typedef enum {
 #define HOST_BLE_TYPE             1
 #define HOST_RF_TYPE              2
 
-#define RF_POWER_DOWN_DELAY       (30)
+#define RF_POWER_DOWN_DELAY       (dev_info.link_mode == LINK_RF_24 ? 5 : 30)
 
 #define MICRO_PRESS_DELAY         5
 #define SMALL_PRESS_DELAY         10
 #define MEDIUM_PRESS_DELAY        30
 #define LONG_PRESS_DELAY          50
 
-#define T_MIN                     (60 * 100)
+#define T_MIN                     (100 * 60)
 #define DEEP_SLEEP_TIME           4
 
 #define RGB_MATRIX_GAME_MODE      RGB_MATRIX_GRADIENT_LEFT_RIGHT
 #define SIDE_MATRIX_GAME_MODE     4
-#define SOCD_KEYS                 KC_A, KC_D, KC_LEFT, KC_RIGHT
+#define SOCD_KEYS                 KC_A, KC_D, KC_LEFT, KC_RIGHT, KC_UP, KC_DOWN
 
-/*
-#define    CAPS_LED               28
-#define    LSHIFT_LED             41
-#define    WIN_LED                (dev_info.sys_sw_state == SYS_SW_WIN ? 56 : 57)
-#define    NUMLOCK_LED            47
-#define    G_LED                  33
-*/
+// default user config
+#define DEFAULT_LAYER             0
 
 #ifndef DEBOUNCE
 #    define DEBOUNCE 5
 #endif
 
+#define NOP_WAIT                  __asm__ __volatile__("nop;nop;nop;nop;nop;nop;nop;nop;\n\t" ::: "memory")  // sleep 0.125 us (125 ns)
 #define sizeof_array(x)           (sizeof(x)/sizeof(*(x)))
 #define USB_ACTIVE                ((dev_info.link_mode == LINK_USB && USB_DRIVER.state != USB_SUSPENDED) || (dev_info.link_mode != LINK_USB && dev_info.rf_charge == 0x03))
 
@@ -179,12 +175,32 @@ typedef struct
     uint8_t game_debounce_ms;
     uint8_t game_debounce_type;
     uint8_t socd_mode;
-    uint8_t retain1;
-    uint8_t retain2;
+    uint8_t rf_delay_step;
+    uint8_t link_os;       // per-link Mac/Win: bit (1 << link_mode) set = Win
+    uint8_t link_frow;     // per-link top row: bit (1 << link_mode) set = F1-F12 first, media with Fn
+    uint8_t link_valid;    // LINK_CFG_VALID once the per-link settings are initialised
+    uint8_t reserved[5];   // room for new settings without another EEPROM reset
 } user_config_t;
 
-_Static_assert(sizeof(user_config_t) == EECONFIG_KB_DATA_SIZE, "Mismatch in user EECONFIG stored data");
+#define LINK_CFG_VALID 0xA5
 
+/*
+ * Side light indicator palette, at indicator level (scaled by side brightness).
+ * One meaning per colour on each strip. Tune here: cheap RGB LEDs render r=g=b
+ * bluish and r=g greenish, and blue looks dimmer than green, hence the offsets.
+ */
+#define IND_CAPS    0x00, 0x80, 0x70 // cyan: Caps Lock / Caps Word
+#define IND_LOCKED  0x80, 0x00, 0x00 // red: Win/Cmd locked, battery low
+#define IND_GAME    0x80, 0x00, 0x60 // magenta: game mode
+#define IND_WHITE   0x80, 0x70, 0x58 // warm white: Num Lock, setting toasts
+#define IND_BT      0x00, 0x18, 0xA0 // blue: Bluetooth
+#define IND_24G     0x00, 0x80, 0x00 // green: 2.4G
+#define IND_USB     0x80, 0x60, 0x00 // yellow: wired
+#define IND_BAT_HI  0x00, 0x80, 0x00 // battery > 80%
+#define IND_BAT_MID 0x80, 0x60, 0x00 // battery > 50%
+#define IND_BAT_LO  0x80, 0x28, 0x00 // battery > 20%
+
+_Static_assert(sizeof(user_config_t) == EECONFIG_KB_DATA_SIZE, "Mismatch in user EECONFIG stored data");
 
 typedef struct
 {
@@ -195,7 +211,8 @@ typedef struct
     uint8_t KC_G;
     uint8_t KC_F1;
     uint8_t RF_DFU;
-    uint8_t KC_TAB;
+    uint8_t KC_F12;
+    uint8_t NUM[10]; // number row 1..0
     uint8_t SOCD_TOG;
 } led_index_t;
 
@@ -204,18 +221,19 @@ extern DEV_INFO_STRUCT    dev_info;
 extern user_config_t      user_config;
 
 extern uint8_t            rf_blink_cnt;
-extern uint16_t           rf_link_show_time;
 extern uint8_t            rf_disconnect_delay;
+extern uint16_t           rf_link_show_time;
 
 extern bool               f_bat_hold;
 extern bool               game_mode_enable;
 extern uint32_t           sys_show_timer;
 extern uint32_t           sleep_show_timer;
 extern uint16_t           f_rf_sw_press;
+extern uint16_t           f_rf_dfu_press;
 extern uint16_t           f_dev_reset_press;
-extern bool               f_bat_num_show;
 extern uint16_t           f_rgb_test_press;
 extern uint16_t           f_caps_word_tg;
+extern bool               f_bat_num_show;
 extern uint16_t           f_numlock_press;
 extern uint16_t           f_gmode_reset_press;
 
@@ -233,16 +251,20 @@ extern bool               f_wakeup_prepare;
 extern bool               f_goto_sleep;
 extern bool               f_goto_deepsleep;
 
-
 extern uint32_t           eeprom_update_timer;
-extern uint32_t           dequeue_delay;
 extern bool               rgb_update;
 extern bool               user_update;
 extern uint8_t            rgb_required;
+extern uint8_t            low_bat_level;
+extern bool               rgb_power_save;
+extern uint16_t           left_pressed;
 extern uint16_t           left_pressed;
 extern uint16_t           right_pressed;
+extern uint32_t           dequeue_delay;
+extern uint8_t            delay_step_timer;
+extern uint16_t           side_one_timer;
 
-extern bool               is_side_rgb_off(void);
+extern bool               is_side_is31fl3733_off(void);
 extern void               user_config_override(void);
 extern void               game_config_override(void);
 
@@ -252,22 +274,25 @@ void    rf_device_init(void);
 void    uart_send_report_repeat(void);
 void    uart_receive_pro(void);
 void    uart_send_report(uint8_t report_type, uint8_t *report_buf, uint8_t report_size);
-void    signal_sleep(uint8_t r, uint8_t g, uint8_t b);
+void    signal_sleep(void);
 void    side_speed_control(uint8_t dir);
 void    side_light_control(uint8_t dir);
 void    side_colour_control(uint8_t dir);
 void    side_mode_control(uint8_t dir);
-void    side_one_control(uint8_t dir);
+void    side_one_control(void);
 void    led_show(void);
 void    sleep_handle(void);
 void    bat_num_led(void);
 void    rgb_test_show(void);
 void    gpio_init(void);
-void    custom_key_press(void);
+void    user_key_press(void);
 void    break_all_key(void);
 void    switch_dev_link(uint8_t mode);
 void    dial_sw_scan(void);
 void    dial_sw_fast_scan(void);
+void    toggle_link_os(void);
+void    link_prev(void);
+void    toggle_link_frow(void);
 void    timer_pro(void);
 void    load_eeprom_data(void);
 void    delay_update_eeprom_data(void);
@@ -278,12 +303,15 @@ void    matrix_io_delay(void);
 void    game_mode_tweak(void);
 void    user_debug(void);
 void    call_update_eeprom_data(bool* eeprom_update_init);
-void    signal_rgb_led(uint8_t color, uint8_t bin_type, uint8_t start_led, uint8_t end_led, uint16_t show_time);
+void    side_toast(uint8_t n, uint8_t of, uint8_t r, uint8_t g, uint8_t b);
+void    signal_rgb_led(uint8_t selected_color, uint8_t start_led, uint8_t end_led, uint16_t show_time);
 void    reset_led_idx(void);
 void    game_config_reset(uint8_t save_to_eeprom);
+void    rgb_matrix_step_game_mode(uint8_t step);
 void    debounce_type(void);
+void    power_save(void);
+void    clear_rgb(void);
 uint8_t step_helper(uint8_t dir, uint8_t value);
 uint8_t get_led_idx(uint16_t keycode);
 uint8_t get_array_idx(uint8_t *array, uint8_t size, uint16_t elm);
-void    rgb_matrix_step_game_mode(uint8_t step);
 uint8_t uart_send_cmd(uint8_t cmd, uint8_t ack_cnt, uint8_t delayms);

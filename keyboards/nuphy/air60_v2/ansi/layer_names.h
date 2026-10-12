@@ -1,3 +1,5 @@
+#pragma once
+
 enum layers{
     MAC_BASE,
     MAC_FN,

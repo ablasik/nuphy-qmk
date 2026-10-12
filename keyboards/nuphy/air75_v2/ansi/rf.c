@@ -171,6 +171,12 @@ void rf_protocol_receive(void) {
             Usart_Mgr.RXDState = RX_DATA_ERR;
             return;
         } else if (Usart_Mgr.RXDLen > 4) {
+            // header(4) + payload + checksum must be fully received (nuphy 2.1.x).
+            // '<' not '!=': uart_receive_pro() may batch trailing bytes.
+            if (Usart_Mgr.RXDLen < RX_LEN + 5) {
+                Usart_Mgr.RXDState = RX_DATA_ERR;
+                return;
+            }
             for (i = 0; i < RX_LEN; i++) {
                 check_sum += Usart_Mgr.RXDBuf[4 + i];
             }
@@ -179,9 +185,14 @@ void rf_protocol_receive(void) {
                 return;
             }
         } else if (Usart_Mgr.RXDLen == 3) {
-            if (Usart_Mgr.RXDBuf[2] == 0xA0) {
-                f_uart_ack = 1;
+            if (Usart_Mgr.RXDBuf[2] != 0xA0) {
+                Usart_Mgr.RXDState = RX_DATA_ERR;
+                return;
             }
+            f_uart_ack = 1;
+        } else {
+            Usart_Mgr.RXDState = RX_DATA_ERR;
+            return;
         }
 
         Usart_Mgr.RXCmd = RX_CMD;
@@ -564,7 +575,11 @@ void uart_send_report(uint8_t report_type, uint8_t *report_buf, uint8_t report_s
     memcpy(&Usart_Mgr.TXDBuf[4], report_buf, report_size);
     Usart_Mgr.TXDBuf[4 + report_size] = get_checksum(&Usart_Mgr.TXDBuf[4], report_size);
 
-    uart_send_bytes(&Usart_Mgr.TXDBuf[0], report_size + 5, 1);
+    // Keyboard reports are re-sent by uart_send_report_repeat(); consumer/system
+    // aren't, so send those 3x like stock nuphy (lost key-up = stuck volume etc).
+    // Not mouse: its x/y are relative and would triple if the module doesn't dedupe.
+    uint8_t repeat = (report_type == CMD_RPT_CONSUME || report_type == CMD_RPT_SYS) ? 3 : 1;
+    uart_send_bytes(&Usart_Mgr.TXDBuf[0], report_size + 5, repeat);
     uart_rpt_timer = timer_read32(); // reset uart repeat timer.
 }
 
@@ -577,7 +592,9 @@ void uart_receive_pro(void) {
     if (uart_available()) {
         wait_us(200);
         // Receiving serial data from RF module
-        while (uart_available()) {
+        // keep reading while bytes trickle in: a byte is ~24us at 460800 baud, so a
+        // longer frame (status sync, read data) may not be fully there after 200us
+        while (uart_available() || (wait_us(200), uart_available())) {
             uint8_t byte = uart_read();
             if (byte == UART_HEAD) { // valid UART transaction always begins with 0x5A
                 rcv_start = true;

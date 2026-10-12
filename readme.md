@@ -4,11 +4,13 @@ Community-maintained QMK firmware for NuPhy keyboards.
 
 NuPhy no longer develops the QMK firmware for its V2 boards, and the best community fork ([adi4086](https://github.com/adi4086/qmk_firmware)) is no longer maintained either. This project picks it up: it tracks current upstream QMK, ports NuPhy's own fixes, and adds new features.
 
-| Keyboard   | Status       | Branch     |
-|------------|--------------|------------|
-| Air96 V2   | ✅ maintained | `air96-v2` |
-| Air75 V2   | planned      |            |
-| Air60 V2   | planned      |            |
+| Keyboard   | Status                                  | Board code |
+|------------|-----------------------------------------|------------|
+| Air96 V2   | ✅ maintained (the author's board)        | [`keyboards/nuphy/air96_v2`](keyboards/nuphy/air96_v2/ansi) |
+| Air75 V2   | 🧪 same features, not yet tested on hardware | [`keyboards/nuphy/air75_v2`](keyboards/nuphy/air75_v2/ansi) |
+| Air60 V2   | 🧪 same features, not yet tested on hardware | [`keyboards/nuphy/air60_v2`](keyboards/nuphy/air60_v2/ansi) |
+
+All boards live on the `nuphy-keyboards` branch and share the same firmware code. If you own an Air75 V2 or Air60 V2, a test report (even "it works") in the issues helps a lot.
 
 > [!WARNING]
 > This is unofficial firmware. Flashing it is at your own risk. The STM32 DFU bootloader can't be overwritten, so you can always go back to stock firmware.
@@ -68,7 +70,7 @@ Added in this repo:
 
 [Download the Quick Guide as PDF](keyboards/nuphy/air96_v2/ansi/quick_guide.pdf)
 
-The full list of key combos is in [`keyboards/nuphy/air96_v2/ansi/customizations.md`](keyboards/nuphy/air96_v2/ansi/customizations.md).
+The guide shows the Air96 V2; the Air75 V2 uses almost the same combos. The full list of key combos is in each board's `customizations.md` ([Air96](keyboards/nuphy/air96_v2/ansi/customizations.md), [Air75](keyboards/nuphy/air75_v2/ansi/customizations.md), [Air60](keyboards/nuphy/air60_v2/ansi/customizations.md)); the Air60 notes cover what moves on a board without an F row.
 
 ## Tips
 
@@ -86,15 +88,18 @@ Update the **RF module** and **dongle** to NuPhy's latest firmware (2.1.5) first
 
 ## Flashing
 
-1. Download the `.bin` from [Releases](../../releases), or build it yourself (see below).
+1. Download the `.bin` for your board from [Releases](../../releases), or build it yourself (see below). Make sure the file name matches your keyboard.
 2. Connect the keyboard over USB.
 3. Press `Fn+M+Esc` and keep holding `Esc`. The keyboard reboots into the bootloader.
-4. Flash the `.bin` with [QMK Toolbox](https://github.com/qmk/qmk_toolbox), or from the command line:
+4. Flash the `.bin` from the command line (macOS: `brew install dfu-util`):
    ```sh
-   dfu-util -a 0 -s 0x08000000:leave -D nuphy_air96_v2_ansi_default.bin
+   dfu-util -a 0 -d 0483:DF11 -s 0x08000000:leave -D nuphy_air96_v2_ansi_default.bin
    ```
+   [QMK Toolbox](https://github.com/qmk/qmk_toolbox) works too, but on Apple Silicon Macs it needs Rosetta (`softwareupdate --install-rosetta`); without it, it prints "Bad CPU type in executable" followed by a misleading "Flash complete", and nothing is flashed.
 
-For remapping, load [`nuphy-air96-v2-via_custom_v4.json`](keyboards/nuphy/air96_v2/ansi/keymaps/nuphy-air96-v2-via_custom_v4.json) in [VIA](https://usevia.app) (Settings → Show Design tab → Load).
+The first boot after switching from stock or adi4086 firmware resets the keyboard settings and the VIA keymap once.
+
+For remapping, load your board's VIA file in [VIA](https://usevia.app) (Settings → Show Design tab → Load): [Air96](keyboards/nuphy/air96_v2/ansi/keymaps/nuphy-air96-v2-via_custom_v4.json), [Air75](keyboards/nuphy/air75_v2/ansi/keymaps/nuphy-air75-v2-via_custom_v4.json), [Air60](keyboards/nuphy/air60_v2/ansi/keymaps/nuphy-air60-v2-via_custom_v4.json). The files are also attached to every release.
 
 ## Building
 
@@ -104,7 +109,7 @@ The easiest way is Docker, which needs no local toolchain:
 git clone --recurse-submodules https://github.com/ablasik/nuphy-qmk.git
 cd nuphy-qmk
 docker run --rm -v "$PWD":/qmk_firmware -w /qmk_firmware ghcr.io/qmk/qmk_cli \
-  qmk compile -kb nuphy/air96_v2/ansi -km default
+  qmk compile -kb nuphy/air96_v2/ansi -km default   # or air75_v2 / air60_v2
 ```
 
 Or with the [QMK CLI](https://docs.qmk.fm/newbs_getting_started):
@@ -112,6 +117,8 @@ Or with the [QMK CLI](https://docs.qmk.fm/newbs_getting_started):
 ```sh
 qmk compile -kb nuphy/air96_v2/ansi -km default
 ```
+
+GitHub Actions builds all boards on every push to `nuphy-keyboards` and on pull requests that touch `keyboards/nuphy/` (the `.bin` files are in the run's artifacts). Pushing a `v*` tag publishes a release with the `.bin` and VIA files.
 
 ## Contributing
 

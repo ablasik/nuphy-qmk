@@ -76,3 +76,19 @@ void side_ws2812_flush(void) {
 
     flush_side_leds = false;
 }
+
+void side_ws2812_dim_strip(uint8_t side, uint8_t shift) {
+    uint8_t start = side == RIGHT_SIDE ? SIDE_LINE : 0;
+    for (uint8_t i = start; i < start + SIDE_LINE; i++) {
+        rgb_t *c = &side_leds[i];
+        if (c->r | c->g | c->b) { flush_side_leds = true; }
+        c->r >>= shift, c->g >>= shift, c->b >>= shift;
+    }
+}
+
+void ws2812_scale_range(uint8_t from, uint8_t to, uint8_t lv) {
+    for (uint8_t i = from; i < to; i++) {
+        ws2812_led_t c = ws2812_leds[i];
+        ws2812_set_color(i, (c.r * lv) >> 8, (c.g * lv) >> 8, (c.b * lv) >> 8);
+    }
+}

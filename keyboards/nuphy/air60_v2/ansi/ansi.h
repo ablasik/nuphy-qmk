@@ -27,39 +27,44 @@ enum custom_keycodes {
     LNK_BLE2,
     LNK_BLE3,
 
-    MAC_VOICE, // F5
-    MAC_DND,
-    TASK,      // KC_CALC
-    SEARCH,    // KC_LCTL + KC_F
-    PRT_SCR,   // PrintScreen
-    PRT_AREA,  // PrintScreen
+    MAC_VOICE,  // F5
+    MAC_DND,    //
+    TASK,       // KC_CALC
+    SEARCH,     // KC_LCTL + KC_F
+    PRT_SCR,    // PrintScreen
+    PRT_AREA,   // PrintScreen
 
-    SIDE_VAI,
     SIDE_VAD,
+    SIDE_VAI,
     SIDE_MOD,
     SIDE_HUI,
-    SIDE_SPI,
     SIDE_SPD,
+    SIDE_SPI,
     SIDE_1,
 
     DEV_RESET,
-    SLEEP_MODE,
     BAT_SHOW,
     BAT_NUM,
     RGB_TEST,
+
     NUMLOCK_INS,
     NUMLOCK_IND,
-    SLEEP_NOW,
-    GAME_MODE,
+
     CAPS_WORD,
     WIN_LOCK,
+    SLEEP_MODE,
+    SLEEP_NOW,
+    SLEEP_D,
+    SLEEP_I,
 
-    DEBOUNCE_I,
     DEBOUNCE_D,
+    DEBOUNCE_I,
     DEBOUNCE_T,
 
-    SLEEP_I,
-    SLEEP_D,
-
-    SOCD_TOG
+    GAME_MODE,
+    SOCD_TOG,
+    MACWIN_TG, // Mac/Win for the current connection (appended: keeps VIA numbering)
+    LINK_PREV, // back to the previous wireless device
+    LOCK_SCR,  // lock the computer: Ctrl+Cmd+Q on Mac, Win+L on Windows
+    FROW_SWAP  // swap F1-F12 and media keys on the top row, for the current connection
 };

@@ -34,12 +34,13 @@ static void clear_rf_queue(void) {
 
 static bool enqueue_rf_report(report_buffer_t *report) {
     uint8_t next = (queue_head + 1) % RF_QUEUE_SIZE;
+    bool    full = next == queue_tail;
+    // full: drop the oldest report. Writing anyway made head == tail, i.e. the
+    // whole queue looked empty and was lost; the newest report is the current state.
+    if (full) { queue_tail = (queue_tail + 1) % RF_QUEUE_SIZE; }
     buffer_queue[queue_head] = *report;
     queue_head               = next;
-    if (next == queue_tail) { // queue is full.
-        return false;
-    }
-    return true;
+    return !full;
 }
 
 static bool dequeue_rf_report(report_buffer_t *report) {

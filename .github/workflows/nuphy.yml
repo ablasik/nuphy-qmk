@@ -1,0 +1,63 @@
+name: NuPhy firmware
+
+# Builds every NuPhy board on each push (and on PRs that touch the boards). Pushing a tag
+# like v1.2.0 also publishes a GitHub release with the .bin and VIA files
+# (tags with a dash, e.g. v1.2.0-rc1, become pre-releases).
+
+on:
+  push:
+    branches: [nuphy-keyboards]   # every push: an upstream QMK merge can break the build too
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'keyboards/nuphy/**'
+      - '.github/workflows/nuphy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ghcr.io/qmk/qmk_cli
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [air60_v2, air75_v2, air96_v2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build
+        run: |
+          git config --global --add safe.directory '*'
+          qmk compile -kb nuphy/${{ matrix.board }}/ansi -km default
+          mkdir -p out
+          cp nuphy_${{ matrix.board }}_ansi_default.bin out/nuphy_${{ matrix.board }}_${GITHUB_REF_NAME//\//-}.bin
+          cp keyboards/nuphy/${{ matrix.board }}/ansi/keymaps/*.json out/
+        shell: bash
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.board }}
+          path: out/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

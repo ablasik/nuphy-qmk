@@ -177,9 +177,29 @@ typedef struct
     uint8_t game_debounce_type;
     uint8_t socd_mode;
     uint8_t rf_delay_step;
-    uint8_t retain1;
-    uint8_t retain2;
+    uint8_t link_os;       // per-link Mac/Win: bit (1 << link_mode) set = Win
+    uint8_t link_frow;     // per-link top row: bit (1 << link_mode) set = F1-F12 first, media with Fn
+    uint8_t link_valid;    // LINK_CFG_VALID once the per-link settings are initialised
+    uint8_t reserved[5];   // room for new settings without another EEPROM reset
 } user_config_t;
+
+#define LINK_CFG_VALID 0xA5
+
+/*
+ * Side light indicator palette, at indicator level (scaled by side brightness).
+ * One meaning per colour on each strip. Tune here: cheap RGB LEDs render r=g=b
+ * bluish and r=g greenish, and blue looks dimmer than green, hence the offsets.
+ */
+#define IND_CAPS    0x00, 0x80, 0x70 // cyan: Caps Lock / Caps Word
+#define IND_LOCKED  0x80, 0x00, 0x00 // red: Win/Cmd locked, battery low
+#define IND_GAME    0x80, 0x00, 0x60 // magenta: game mode
+#define IND_WHITE   0x80, 0x70, 0x58 // warm white: Num Lock, setting toasts
+#define IND_BT      0x00, 0x18, 0xA0 // blue: Bluetooth
+#define IND_24G     0x00, 0x80, 0x00 // green: 2.4G
+#define IND_USB     0x80, 0x60, 0x00 // yellow: wired
+#define IND_BAT_HI  0x00, 0x80, 0x00 // battery > 80%
+#define IND_BAT_MID 0x80, 0x60, 0x00 // battery > 50%
+#define IND_BAT_LO  0x80, 0x28, 0x00 // battery > 20%
 
 _Static_assert(sizeof(user_config_t) == EECONFIG_KB_DATA_SIZE, "Mismatch in user EECONFIG stored data");
 
@@ -193,7 +213,7 @@ typedef struct
     uint8_t KC_F1;
     uint8_t RF_DFU;
     uint8_t KC_F12;
-    uint8_t KC_GRV;
+    uint8_t NUM[10]; // number row 1..0
     uint8_t SOCD_TOG;
 } led_index_t;
 
@@ -269,6 +289,9 @@ void    break_all_key(void);
 void    switch_dev_link(uint8_t mode);
 void    dial_sw_scan(void);
 void    dial_sw_fast_scan(void);
+void    toggle_link_os(void);
+void    link_prev(void);
+void    toggle_link_frow(void);
 void    timer_pro(void);
 void    load_eeprom_data(void);
 void    delay_update_eeprom_data(void);
@@ -279,6 +302,7 @@ void    set_link_mode(void);
 void    game_mode_tweak(void);
 void    user_debug(void);
 void    call_update_eeprom_data(bool* eeprom_update_init);
+void    side_toast(uint8_t n, uint8_t of, uint8_t r, uint8_t g, uint8_t b);
 void    signal_rgb_led(uint8_t selected_color, uint8_t start_led, uint8_t end_led, uint16_t show_time);
 void    reset_led_idx(void);
 void    debounce_type(void);

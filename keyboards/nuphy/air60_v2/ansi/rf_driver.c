@@ -15,6 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stddef.h>
+#include <string.h>
 #include "host_driver.h"
 #include "host.h"
 #include "user_kb.h"
@@ -43,6 +45,7 @@ void uart_send_report(uint8_t report_type, uint8_t *report_buf, uint8_t report_s
  *
  */
 static void send_or_queue(report_buffer_t *report) {
+    no_act_time = 0; // macros/mouse keys bypass pre_process_record_kb; don't sleep mid-output
     if (dev_info.rf_state == RF_CONNECT && rf_queue.is_empty() && dequeue_delay == 0) {
         uart_send_report(report->cmd, report->buffer, report->length);
     } else {
@@ -62,7 +65,7 @@ static report_buffer_t make_report_buffer(uint8_t cmd, uint8_t *buff, uint8_t le
 static void uart_auto_nkey_send(uint8_t *now_bit_report, uint8_t size) {
     static uint8_t bytekb_report_buf[8] = {0};
     static uint8_t bitkb_report_buf[16] = {0};
-    static uint8_t pre_bit_report[16]   = {0};
+    static uint8_t pre_bit_report[NKRO_REPORT_BITS + 1] = {0};
 
     uint8_t i, j, byte_index;
     uint8_t change_mask, offset_mask;
@@ -89,7 +92,8 @@ static void uart_auto_nkey_send(uint8_t *now_bit_report, uint8_t size) {
                             break;
                         }
                     }
-                    if (byte_index >= 8) {
+                    // bit report only covers bytes < 16; higher keycodes need a free byte slot
+                    if (byte_index >= 8 && i < sizeof(bitkb_report_buf)) {
                         bitkb_report_buf[i] |= offset_mask;
                         f_bit_send = 1;
                     }
@@ -101,7 +105,7 @@ static void uart_auto_nkey_send(uint8_t *now_bit_report, uint8_t size) {
                             break;
                         }
                     }
-                    if (byte_index >= 8) {
+                    if (byte_index >= 8 && i < sizeof(bitkb_report_buf)) {
                         bitkb_report_buf[i] &= ~offset_mask;
                         f_bit_send = 1;
                     }
@@ -111,7 +115,7 @@ static void uart_auto_nkey_send(uint8_t *now_bit_report, uint8_t size) {
             offset_mask <<= 1;
         }
     }
-    memcpy(pre_bit_report, now_bit_report, 16);
+    memcpy(pre_bit_report, now_bit_report, size);
 
     if (f_byte_send) {
         report_buffer_t rpt_byte = make_report_buffer(CMD_RPT_BYTE_KB, &bytekb_report_buf[0], 8);
@@ -131,6 +135,7 @@ static uint8_t rf_keyboard_leds(void) {
 }
 
 static void rf_send_keyboard(report_keyboard_t *report) {
+    clear_report_buffer();
     report->reserved    = 0;
     report_buffer_t rpt = make_report_buffer(CMD_RPT_BYTE_KB, &report->mods, 8);
     send_or_queue(&rpt);
@@ -140,15 +145,27 @@ static void rf_send_keyboard(report_keyboard_t *report) {
 static void rf_send_nkro(report_nkro_t *report) {
     // clear current reports
     clear_report_buffer();
-    uart_auto_nkey_send(&nkro_report->mods, 16); // only need 1 byte mod + 15 byte keys
+    uart_auto_nkey_send(&nkro_report->mods, NKRO_REPORT_BITS + 1); // mods + all key bits
 }
 
 static void rf_send_mouse(report_mouse_t *report) {
+    // QMK doesn't dedupe mouse reports: clear_keyboard() on every sleep entry
+    // sent an empty one over BT, waking a sleeping Mac. Skip repeated empties.
+    static bool    last_empty = true;
+    static const report_mouse_t empty = {0};
+    // compare payload only: report_id is non-zero with a shared endpoint
+    size_t off = offsetof(report_mouse_t, buttons);
+    bool is_empty = memcmp((uint8_t *)report + off, (const uint8_t *)&empty + off, sizeof(empty) - off) == 0;
+    if (is_empty && last_empty) { return; }
+    last_empty = is_empty;
+
+    clear_report_buffer();
     report_buffer_t rpt = make_report_buffer(CMD_RPT_MS, &report->buttons, 5);
     send_or_queue(&rpt);
 }
 
 static void rf_send_extra(report_extra_t *report) {
+    clear_report_buffer();
     uint8_t cmd_rpt = report->report_id == REPORT_ID_CONSUMER ? CMD_RPT_CONSUME : CMD_RPT_SYS;
     report_buffer_t rpt = make_report_buffer(cmd_rpt, (uint8_t *)(&report->usage), 2);
     send_or_queue(&rpt);

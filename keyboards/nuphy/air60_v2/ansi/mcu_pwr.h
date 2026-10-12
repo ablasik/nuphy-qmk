@@ -57,6 +57,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KCOL_14       A10
 #define KCOL_15       A15
 #define KCOL_16       B3
+#define KCOL_17       C10
+#define KCOL_18       C11
+#define KCOL_19       C12
+#define KCOL_20       D2
 */
 
 #define EXTI_PORT_C0  EXTI_PortSourceGPIOA  // A4
@@ -75,7 +79,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define EXTI_PORT_C13 EXTI_PortSourceGPIOA  // A9
 #define EXTI_PORT_C14 EXTI_PortSourceGPIOA  // A10
 #define EXTI_PORT_C15 EXTI_PortSourceGPIOA  // A15
-#define EXTI_PORT_C16 EXTI_PortSourceGPIOB  // B3  
+#define EXTI_PORT_C16 EXTI_PortSourceGPIOB  // B3
+#define EXTI_PORT_C17 EXTI_PortSourceGPIOC  // C10
+#define EXTI_PORT_C18 EXTI_PortSourceGPIOC  // C11
+#define EXTI_PORT_C19 EXTI_PortSourceGPIOC  // C12
+#define EXTI_PORT_C20 EXTI_PortSourceGPIOD  // D2
+    
 
 #define EXTI_PIN_C0   4   // A4
 #define EXTI_PIN_C1   5   // A5
@@ -94,6 +103,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define EXTI_PIN_C14  10  // A10
 #define EXTI_PIN_C15  15  // A15
 #define EXTI_PIN_C16  3   // B3
+#define EXTI_PIN_C17  10  // C10
+#define EXTI_PIN_C18  11  // C11
+#define EXTI_PIN_C19  12  // C12
+#define EXTI_PIN_C20  2   // D2
 
 void enter_light_sleep(void);
 void exit_light_sleep(bool stm32_init);
@@ -105,6 +118,7 @@ void pwr_led_on(void);
 
 void led_pwr_sleep_handle(void);
 void led_pwr_wake_handle(void);
+
 void m_uart_gpio_set_low_speed(void);
 
 void clear_report_buffer_and_queue(void);
@@ -112,4 +126,6 @@ void clear_report_buffer(void);
 
 void mcu_timer6_init(void);
 void idle_enter_sleep(void);
+
+void interrupt_source_init(void);
 

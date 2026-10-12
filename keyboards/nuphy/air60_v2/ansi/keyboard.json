@@ -25,7 +25,7 @@
     },
     "usb":{
         "vid": "0x19F5",
-        "pid": "0x3265",
+        "pid": "0x3254",
         "polling_interval": 1,
         "device_version": "0.0.1",
         "suspend_wakeup_delay": 50,
