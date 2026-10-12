@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}} Quick Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: a printed manual sheet. The keyboard, drawn from its real geometry with
+   side-printed legends, is the hero; everything else is set in plain columns below it.
+   One deliberate light look (it ships as PNG/PDF), colour only where it means something. */
+:root {
+  color-scheme: dark;
+  /* taken from the board itself: black case, graphite caps, mint/coral/mustard accent caps */
+  --paper: oklch(17% 0.004 250);
+  --ink: oklch(93% 0.004 250);
+  --ink-2: oklch(70% 0.006 250);
+  --rule: oklch(30% 0.006 250);
+  --case: oklch(13% 0.003 250);
+  --case-edge: oklch(27% 0.005 250);
+  --cap: oklch(29% 0.004 250);
+  --cap-edge: oklch(20% 0.004 250);
+  --cap-dim: oklch(24% 0.004 250);
+  --cap-ink: oklch(90% 0.004 250);
+  --fn: oklch(80% 0.11 172);      /* mint, like Esc: legends that need Fn */
+  --m: oklch(80% 0.15 80);        /* mustard, like the space bar: legends that need Fn + M */
+  --coral: oklch(63% 0.17 35);
+  --led-blue: oklch(66% 0.17 258); --led-green: oklch(74% 0.19 145); --led-yellow: oklch(86% 0.16 95);
+  --led-cyan: oklch(82% 0.12 200); --led-white: oklch(97% 0 0); --led-red: oklch(64% 0.21 27);
+  --led-orange: oklch(76% 0.16 60); --led-magenta: oklch(66% 0.24 340); --led-off: oklch(34% 0.005 250); --led-fx: oklch(55% 0.08 300);
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --legend: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+}
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.5 var(--body); }
+.sheet { max-width: 1200px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 56px; }
+
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 40px; }
+h1 { font: 700 clamp(44px, 7vw, 76px)/0.9 var(--display); letter-spacing: -0.01em; margin: 0; text-transform: uppercase; }
+h1 small { display: block; font: 500 20px/1.2 var(--display); letter-spacing: 0.04em; color: var(--ink-2); margin-top: 8px; text-transform: none; }
+.key-legend { display: flex; gap: 22px; flex-wrap: wrap; font: 500 15px/1.3 var(--body); }
+.key-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+/* the board */
+figure { margin: 28px 0 0; }
+.case { position: relative; background: var(--case); border: 1px solid var(--case-edge); border-radius: 16px; padding: 16px 26px; }
+.board { position: relative; width: 100%; aspect-ratio: {{ASPECT}}; }
+.key { position: absolute; padding: 2.5px; box-sizing: border-box; }
+.cap { display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box;
+  background: var(--cap-dim); border-radius: 6px; padding: 5px 6px; overflow: hidden;
+  box-shadow: inset 0 -3px 0 var(--cap-edge), inset 0 1px 0 oklch(36% 0.004 250); }
+.key.has .cap { background: var(--cap); }
+.cap b { font: 600 clamp(7px, 0.95vw, 12.5px)/1.05 var(--legend); color: var(--ink-2); }
+.key.word .cap b { font-size: clamp(6px, 0.75vw, 10px); letter-spacing: 0.06em; text-transform: uppercase; }
+.key.has .cap b { color: var(--cap-ink); }
+.lf, .lm { display: block; font: 600 clamp(6px, 0.8vw, 10.5px)/1.1 var(--legend); }
+.lf { color: var(--fn); }
+.lm { color: var(--m); }
+.key.mint .cap { background: oklch(72% 0.1 172); }
+.key.coral .cap { background: var(--coral); }
+.key.mustard .cap { background: oklch(74% 0.14 80); }
+.key.mint .cap b, .key.coral .cap b { color: oklch(20% 0.01 250); }
+.key.mint .lm { color: oklch(42% 0.14 50); }
+.key.mint .lf { color: oklch(24% 0.05 250); }
+.fnkey .cap { box-shadow: inset 0 0 0 2px var(--fn), inset 0 -3px 0 var(--cap-edge); }
+.fnkey .cap b { color: var(--fn); }
+.mkey .cap { box-shadow: inset 0 0 0 2px var(--m), inset 0 -3px 0 var(--cap-edge); }
+/* exactly one key row tall, level with the Esc row (case padding 16px, key padding 2.5px) */
+.side { position: absolute; top: calc(16px + 2.5px); height: calc((100% - 32px) / {{ROWS}} - 5px); width: 4px; display: grid; grid-template-rows: repeat({{SIDE_N}}, 1fr); gap: 1px; }
+.side.sl { left: 10px; } .side.sr { right: 10px; }
+.side i { border-radius: 2px; background: var(--led-off); }
+figcaption { display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; font: 500 14px/1.3 var(--body); color: var(--ink-2); }
+
+/* content: one full-width row per topic. Left: what it is, in a sentence. Right: how. */
+.topic { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 16px 48px; padding-block: 28px; border-top: 1px solid var(--rule); }
+.topic:first-of-type { margin-top: 36px; }
+.intro h2 { font: 700 30px/1 var(--display); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 10px; color: var(--ink); text-wrap: balance; }
+.intro p { color: var(--ink-2); margin: 0; max-width: 34ch; }
+.topic.quiet .intro h2 { font-size: 24px; color: var(--ink-2); }
+.body { display: grid; gap: 22px 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.body.one { grid-template-columns: minmax(0, 1fr); }
+.body.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.block { min-width: 0; }
+h3 { font: 600 15px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 10px; color: var(--ink-2); }
+p { margin: 0 0 10px; max-width: 62ch; }
+.steps { counter-reset: step; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 32px; }
+.step { counter-increment: step; min-width: 0; }
+.step h3::before { content: counter(step); display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%;
+  background: var(--fn); color: var(--case); font: 700 13px/1 var(--display); letter-spacing: 0; vertical-align: 1px; }
+.k { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--cap); color: var(--cap-ink); box-shadow: inset 0 -2px 0 var(--cap-edge);
+  font: 600 13px/1.5 var(--legend); white-space: nowrap; }
+.k.fn { color: var(--fn); box-shadow: inset 0 0 0 1.5px var(--fn); }
+.k.m { color: var(--m); box-shadow: inset 0 0 0 1.5px var(--m); }
+.plus { color: var(--ink-2); margin-inline: 2px; }
+/* shortcut lists: combo column aligned, action beside it */
+dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 9px 16px; margin: 0; align-items: baseline; }
+dt { white-space: nowrap; }
+dd { margin: 0; }
+dd small { display: block; color: var(--ink-2); font-size: 13.5px; line-height: 1.4; margin-top: 2px; }
+.leds { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px 14px; align-items: center; margin: 0; }
+.strip { display: inline-grid; grid-template-rows: repeat({{SIDE_N}}, 6px); gap: 2px; width: 7px; vertical-align: middle; }
+.strip i { border-radius: 2px; background: var(--led-off); }
+.strip i.fx { background: var(--led-fx); opacity: .25; }
+.strip i.dim { opacity: .35; }
+.b { background: var(--led-blue) !important; } .g { background: var(--led-green) !important; } .y { background: var(--led-yellow) !important; }
+.c { background: var(--led-cyan) !important; } .w { background: var(--led-white) !important; }
+.r { background: var(--led-red) !important; } .o { background: var(--led-orange) !important; } .mg { background: var(--led-magenta) !important; }
+.muted { color: var(--ink-2); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 600 13px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+.tbl { overflow-x: auto; }
+footer { margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; color: var(--ink-2); font-size: 14px; }
+a { color: var(--fn); }
+a:focus-visible { outline: 2px solid var(--fn); outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .topic { grid-template-columns: minmax(0, 1fr); }
+  .steps, .body.three { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 620px) {
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .case { padding: 10px 16px; }
+  .figwrap { overflow-x: auto; }
+  .figwrap .case { min-width: 640px; }
+}
+</style>
+</head>
+<body>
+
+<main class="sheet">
+  <header>
+    <h1>{{TITLE}}<small>Quick Guide · nuphy-qmk community firmware</small></h1>
+    <div class="key-legend">
+      <span><i class="swatch" style="background:var(--fn)"></i>hold Fn</span>
+      <span><i class="swatch" style="background:var(--m)"></i>hold Fn + M<!--if fnshift_m--> (or Fn + Shift)<!--endif--></span>
+    </div>
+  </header>
+
+  <figure>
+    <div class="figwrap">
+      <div class="case">
+        <div class="side sl">{{SIDE_LEFT}}</div>
+        <div class="board">
+{{BOARD}}
+        </div>
+        <div class="side sr">{{SIDE_RIGHT}}</div>
+      </div>
+    </div>
+    <figcaption><span>← Left light: Caps, key locks, connection</span><span>Right light: <!--if numpad-->Num Lock, <!--endif-->battery →</span></figcaption>
+  </figure>
+
+
+  <section class="topic">
+    <div class="intro"><h2>Getting started</h2><p>Three steps to typing on every device you own.</p></div>
+    <div class="steps">
+      <div class="step">
+        <h3>Turn it on</h3>
+        <p>The mode switch on the back edge has three positions: <b>Off</b>, <b>Wired</b> (USB cable) and <b>Wireless</b> (Bluetooth or 2.4G dongle).</p>
+      </div>
+      <div class="step">
+        <h3>Pair a device</h3>
+        <dl>
+          <dt>{{fn LNK_BLE1}} … {{key fn:LNK_BLE3}}</dt><dd>Bluetooth 1, 2, 3</dd>
+          <dt>{{fn LNK_RF}}</dt><dd>2.4G dongle</dd>
+        </dl>
+        <p class="muted" style="margin-top:10px">Tap to switch between devices; {{fn LINK_PREV}} jumps back to the previous one. Hold 3 s to pair a new one. For the dongle, hold {{fn LNK_RF}} first, then plug it in.</p>
+      </div>
+      <div class="step">
+        <h3>Pick Mac or Windows</h3>
+        <p>Set the OS switch to Mac or Win. Each device remembers its own choice, so your Mac on BT 1 stays Mac and your PC on the dongle stays Windows. On the cable it detects the OS by itself.</p>
+        <dl><dt>{{fnm MACWIN_TG}}</dt><dd>Flip it without the switch</dd></dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="topic">
+    <div class="intro"><h2>Reading the lights</h2><p>Lights stay off unless something changes how your keys behave. Each one sits on the side of the key it belongs to: Caps on the left<!--if numpad-->, Num Lock on the right<!--endif-->. While one is on, the rest of that strip dims so it stands out over any light effect.</p></div>
+    <div class="body">
+      <div class="block">
+        <h3>Left · how your keys behave</h3>
+        <div class="leds">
+          {{STRIP c fx*}}<span><b>Caps Lock</b> on. Breathing: <b>Caps Word</b> is on.</span>
+          {{STRIP fx r fx*}}<span><b>Win / ⌘ key locked</b></span>
+          {{STRIP fx fx mg fx*}}<span><b>Game mode</b> on</span>
+          {{STRIP b.dim*}}<span><b>Connecting</b>: the whole strip breathes in the connection's colour, <span style="color:var(--led-blue)">blue</span> Bluetooth, <span style="color:var(--led-green)">green</span> 2.4G, <span style="color:var(--led-yellow)">yellow</span> wired. Keys you press now are sent once it connects.</span>
+          {{STRIP b*}}<span><b>Fast blink</b>: pairing. <b>Solid for 2 s</b>: connected. Its key ({{key fn:LNK_BLE1}} … {{key fn:LNK_RF}}) lights up too.</span>
+        </div>
+      </div>
+      <div class="block">
+        <h3>Right · <!--if numpad-->numpad &amp; <!--endif-->power</h3>
+        <div class="leds">
+<!--if numpad-->          {{STRIP w fx*}}<span><b>Num Lock</b> on</span>
+<!--endif-->          {{STRIP _* y y y}}<span><b>Battery</b>, one LED per 20%: <span style="color:var(--led-green)">green</span> over 80%, <span style="color:var(--led-yellow)">yellow</span>, <span style="color:var(--led-orange)">orange</span>, <span style="color:var(--led-red)">red</span> at 20% or less. Shown at power-on, when you plug in, and with {{fn BAT_SHOW}}. The top LED breathes while charging.</span>
+          {{STRIP fx* r}}<span><b>Charge soon</b>: the bottom LED pulses red below 20%.</span>
+          {{STRIP _* w.dim w w}}<span><b>You changed a setting</b>: white, lit LEDs show your choice, dim ones the other options. Shown for 2 s.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="topic">
+    <div class="intro"><h2>Everyday shortcuts</h2><p>Hold <b style="color:var(--fn)">Fn</b> and every key with a function lights up mint. Hold <b style="color:var(--fn)">Fn</b>+<b style="color:var(--m)">M</b> and the M-layer keys light up mustard.</p></div>
+    <div class="body three">
+<!--if frow-->      <div class="block">
+        <h3>Top row</h3>
+        <div class="tbl"><table>
+          <tr><th></th><th>Mac</th><th>Windows</th></tr>
+          <tr><td>Plain</td><td>Media keys</td><td>F1–F12</td></tr>
+          <tr><td>With Fn</td><td>F1–F12</td><td>Media keys</td></tr>
+          <tr><td>PrtSc</td><td>Area ⌘⇧4</td><td>Print Screen</td></tr>
+          <tr><td>Fn PrtSc</td><td>Full ⌘⇧3</td><td>Snipping Tool</td></tr>
+        </table></div>
+        <p class="muted" style="margin-top:10px">Prefer it the other way round? {{fnm FROW_SWAP}} swaps F1–F12 and media keys, remembered per device.</p>
+      </div>
+<!--endif--><!--if !frow-->      <div class="block">
+        <h3>Number row</h3>
+        <div class="tbl"><table>
+          <tr><th></th><th>Mac</th><th>Windows</th></tr>
+          <tr><td>With Fn</td><td>Media keys</td><td>F1–F12</td></tr>
+          <tr><td>With Fn + Shift</td><td>F1–F12</td><td>Media keys</td></tr>
+        </table></div>
+        <p class="muted" style="margin-top:10px">With no F row, F1–F12 and the media keys sit on the number row, and Fn + Esc types a backtick.</p>
+      </div>
+<!--endif-->      <div class="block">
+        <h3>Backlight</h3>
+        <dl>
+          <dt>{{fn RM_VALU}} {{key fn:RM_VALD}}</dt><dd>Brightness</dd>
+          <dt>{{fn RM_NEXT}}</dt><dd>Next effect</dd>
+          <dt>{{fn RM_HUEU}}</dt><dd>Colour</dd>
+          <dt>{{fn RM_SPDD}} {{key fn:RM_SPDU}}</dt><dd>Speed</dd>
+        </dl>
+        <p class="muted" style="margin-top:10px">Add <span class="k m">M</span> for the side lights: same keys, plus {{fnm SIDE_1}} for one side only.</p>
+      </div>
+      <div class="block">
+        <h3>Typing</h3>
+        <dl>
+          <dt><span class="k">Shift</span> ×2</dt><dd><b>Caps Word</b><small>The next word in capitals, then back to normal.</small></dd>
+          <dt>{{fn LOCK_SCR}}</dt><dd>Lock the computer</dd>
+          <dt>{{fn KC_INS}}</dt><dd>Insert</dd>
+          <!--if numpad--><dt>{{fnm NUMLOCK_IND}}</dt><dd>Num Lock light: side, key, or off</dd><!--endif-->
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="topic">
+    <div class="intro"><h2>Sleep &amp; battery</h2><p>The keyboard sleeps when you stop typing. Any key wakes it.</p></div>
+    <div class="body">
+      <div class="block">
+        <h3>{{fn SLEEP_MODE}} &nbsp;Sleep mode</h3>
+        <div class="leds">
+          {{STRIP _* w w w}}<span><b>Full saving</b> (default). Lights off after 2 min, chip off 4 min later. The first key after a long break may take a second.</span>
+          {{STRIP _* w.dim w w}}<span><b>Lights only.</b> Lights off after 6 min; wakes faster.</span>
+          {{STRIP _* w.dim w.dim w}}<span><b>Never.</b> For the cable or a full battery.</span>
+        </div>
+      </div>
+      <div class="block">
+        <h3>Battery</h3>
+        <dl>
+          <dt>{{fn BAT_NUM}}</dt><dd>Battery level on the number row<small>1 to 0 light up; 0 means 100%.</small></dd>
+          <dt>{{fn BAT_SHOW}}</dt><dd>Keep the battery gauge on</dd>
+          <dt>{{fnm SLEEP_D}} {{key m:SLEEP_I}}</dt><dd>Lights-off time, 1–100 min</dd>
+          <dt>{{fnm SLEEP_NOW}}</dt><dd>Sleep now, e.g. before packing it</dd>
+        </dl>
+        <p class="muted" style="margin-top:10px">On battery the backlight runs at half brightness and fades out after 30 s without typing; any key brings it back. Below 20% it switches off. No sleep while charging, on the cable, or in game mode.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="topic">
+    <div class="intro"><h2>Gaming</h2><p>Faster scanning, no surprise menus, and snap tap for shooters.</p></div>
+    <div class="body">
+      <div class="block">
+        <dl>
+          <dt>{{fnm GAME_MODE}}</dt><dd><b>Game mode</b><small>Fastest key scanning, sleep off. Hold to reset its settings.</small></dd>
+          <dt><span class="k fn">Fn</span><span class="plus">+</span><span class="k m">M</span><span class="plus">+</span><span class="k">Win</span></dt><dd><b>Lock the Win / ⌘ key</b><small>So it can't open menus mid-game.</small></dd>
+          <dt>{{fnm SOCD_TOG}}</dt><dd><b>Snap tap</b><small>You strafe with A and D. Normally, holding A and pressing D makes the game see both and your character stops. With snap tap the newest key wins, so you change direction instantly. Some competitive games ban it.</small></dd>
+        </dl>
+      </div>
+      <div class="block">
+        <div class="tbl"><table>
+          <tr><th>Snap tap mode<br>hold A, press D</th><th>Game sees</th><th>Let go of D</th></tr>
+          <tr><td>0 · Off</td><td>A and D</td><td>A</td></tr>
+          <tr><td>1 · Cancel</td><td>D</td><td>nothing</td></tr>
+          <tr><td><b>2 · Last key wins</b></td><td>D</td><td>A again</td></tr>
+          <tr><td>3 · Neutral</td><td>nothing</td><td>A again</td></tr>
+        </table></div>
+        <p class="muted" style="margin-top:8px">Mode 2 is what most players want.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="topic quiet">
+    <div class="intro"><h2>Advanced</h2><p>Most people never need these.</p></div>
+    <div class="body">
+      <div class="block">
+        <h3>Maintenance</h3>
+        <dl>
+          <dt>{{fn DEV_RESET}}</dt><dd>Hold 3 s: factory reset<small>Clears all pairings and settings.</small></dd>
+          <dt>{{fnm QK_REBOOT}}</dt><dd>Restart<small>Keep holding Esc to enter the bootloader for flashing.</small></dd>
+          <dt>{{fnm RF_DFU}}</dt><dd>Wireless wake delay<small>Hold 3 s on the cable: radio firmware update mode.</small></dd>
+          <dt>{{fnm DB_TOGG}}</dt><dd>Debug messages (QMK console, cable)</dd>
+          <dt>{{fn RGB_TEST}}</dt><dd>LED test</dd>
+        </dl>
+      </div>
+      <div class="block">
+        <h3>Key feel</h3>
+        <dl>
+          <dt>{{fnm DEBOUNCE_T}}</dt><dd>Debounce type<small>Change it only if a key types twice.</small></dd>
+          <dt>{{fnm DEBOUNCE_D}} {{key m:DEBOUNCE_I}}</dt><dd>Debounce time, 1–100 ms</dd>
+          <dt>{{fnm CAPS_WORD}}</dt><dd>Hold to turn Caps Word on or off</dd>
+        </dl>
+        <h3 style="margin-top:22px">Remap with VIA</h3>
+        <p>Open <a href="https://usevia.app">usevia.app</a> with the cable connected and load <b>{{VIA}}</b> from the repository. NuPhy's own file doesn't match this firmware.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Community firmware, not made or supported by NuPhy.</span>
+    <a href="https://github.com/ablasik/nuphy-qmk">github.com/ablasik/nuphy-qmk</a>
+  </footer>
+</main>
+</body>
+</html>

@@ -66,11 +66,24 @@ Added in this repo:
 
 ## Quick Guide
 
+Every board has a one-page guide to its shortcuts and lights, as an image and a PDF to print.
+
+<details open><summary><b>Air96 V2</b> · <a href="docs/nuphy/air96_v2_quick_guide.pdf">PDF</a></summary>
+
 ![Air96 V2 Quick Guide](docs/nuphy/air96_v2_quick_guide.png)
+</details>
 
-[Download the Quick Guide as PDF](docs/nuphy/air96_v2_quick_guide.pdf)
+<details><summary><b>Air75 V2</b> · <a href="docs/nuphy/air75_v2_quick_guide.pdf">PDF</a></summary>
 
-The guide shows the Air96 V2; the Air75 V2 uses almost the same combos. The full list of key combos is in each board's `customizations.md` ([Air96](keyboards/nuphy/air96_v2/ansi/customizations.md), [Air75](keyboards/nuphy/air75_v2/ansi/customizations.md), [Air60](keyboards/nuphy/air60_v2/ansi/customizations.md)); the Air60 notes cover what moves on a board without an F row.
+![Air75 V2 Quick Guide](docs/nuphy/air75_v2_quick_guide.png)
+</details>
+
+<details><summary><b>Air60 V2</b> · <a href="docs/nuphy/air60_v2_quick_guide.pdf">PDF</a></summary>
+
+![Air60 V2 Quick Guide](docs/nuphy/air60_v2_quick_guide.png)
+</details>
+
+The guides are generated from each board's keymap and layout, so they follow the firmware. To edit or rebuild them, see [`docs/nuphy/guide`](docs/nuphy/guide). Every shortcut is also listed in each board's `customizations.md` ([Air96](keyboards/nuphy/air96_v2/ansi/customizations.md), [Air75](keyboards/nuphy/air75_v2/ansi/customizations.md), [Air60](keyboards/nuphy/air60_v2/ansi/customizations.md)).
 
 ## Tips
 

@@ -197,8 +197,8 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                     set_link_mode();
                     uart_send_cmd(CMD_SET_LINK, 10, 20);
                 }
-                for (uint8_t i = 1; i <= 4; i++) {
-                    rgb_matrix_set_color(led_idx.NUM[i - 1], RGB_OFF);
+                for (uint8_t i = 0; i < 4; i++) {
+                    rgb_matrix_set_color(led_idx.LINK[i], RGB_OFF);
                 }
                 rgb_matrix_update_pwm_buffers();
             }

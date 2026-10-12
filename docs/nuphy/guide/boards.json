@@ -1,0 +1,5 @@
+{
+  "air96_v2": {"accents": {"mint": ["KC_ESC", "KC_PENT"], "coral": ["KC_ENT"], "mustard": ["KC_SPC"]}},
+  "air75_v2": {"accents": {"mint": ["KC_ESC"], "coral": ["KC_ENT"], "mustard": ["KC_SPC"]}},
+  "air60_v2": {"accents": {"mint": ["KC_ESC"], "coral": ["KC_ENT"], "mustard": ["KC_SPC"]}}
+}

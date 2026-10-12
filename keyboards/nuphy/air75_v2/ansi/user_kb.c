@@ -627,6 +627,8 @@ void reset_led_idx(void) {
     led_idx.SOCD_TOG = get_led_idx(SOCD_TOG);
     led_idx.KC_F12   = get_led_idx(KC_F12);
     for (uint8_t i = 0; i < 10; i++) { led_idx.NUM[i] = get_led_idx(KC_1 + i); } // KC_1..KC_0
+    for (uint8_t i = 0; i < 3; i++) { led_idx.LINK[i] = get_led_idx(LNK_BLE1 + i); }
+    led_idx.LINK[3] = get_led_idx(LNK_RF);
 }
 
 uint8_t get_led_idx(uint16_t keycode) {

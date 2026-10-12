@@ -1,0 +1,6 @@
+# guide images are committed (the repo ignores *.png / *.pdf elsewhere)
+!*_quick_guide.png
+!*_quick_guide.pdf
+# --html-only output and render temp files
+*_quick_guide.html
+guide/.*.html

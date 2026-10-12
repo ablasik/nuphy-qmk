@@ -521,10 +521,10 @@ void rf_led_show(void) {
     if (dev_info.link_mode <= LINK_BT_3) {
         uint8_t my_pos = dev_info.link_mode == LINK_RF_24 ? 4 : dev_info.link_mode;
         if (rf_link_show_time > RF_LINK_SHOW_TIME - 10) {
-            rgb_matrix_set_color(led_idx.NUM[my_pos - 1], RGB_OFF);
+            rgb_matrix_set_color(led_idx.LINK[my_pos - 1], RGB_OFF);
         } else {
             rgb_required = 1;
-            rgb_matrix_set_color(led_idx.NUM[my_pos - 1], current_rgb.r, current_rgb.g, current_rgb.b);
+            rgb_matrix_set_color(led_idx.LINK[my_pos - 1], current_rgb.r, current_rgb.g, current_rgb.b);
         }
     }
 }
