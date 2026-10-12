@@ -1,41 +1,52 @@
 name: Bug report
-description: Create a report to help us improve QMK Firmware.
-title: "[Bug] "
-labels: ["bug", "help wanted"]
+description: Something doesn't work as it should.
+labels: ["bug"]
 body:
-  - type: markdown
+  - type: dropdown
+    id: board
     attributes:
-      value: |
-        Provide a general summary of the bug in the title above.
+      label: Keyboard
+      options: [Air96 V2, Air75 V2, Air60 V2]
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+      description: The release you flashed (the `.bin` file name), or the commit if you built it yourself.
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      multiple: true
+      options: [USB cable, Bluetooth, 2.4G dongle]
+    validations:
+      required: true
+  - type: input
+    id: rf
+    attributes:
+      label: RF module / dongle firmware
+      description: From NuPhy's updater. 2.1.5 is required.
+      placeholder: "2.1.5"
+  - type: input
+    id: os
+    attributes:
+      label: Computer and OS
+      placeholder: MacBook Air M3, macOS 26.1
+    validations:
+      required: true
   - type: textarea
+    id: what
     attributes:
-      label: Describe the Bug
-      description: A clear and concise description of what the bug is.
-  - type: input
+      label: What happens
+      description: What you did, what you expected, what happened instead. For sleep or wireless problems, say how long the keyboard was idle and which sleep mode it's in (`Fn+]` side LED color).
+    validations:
+      required: true
+  - type: dropdown
+    id: stock
     attributes:
-      label: Keyboard Used
-      description: The name of the keyboard from the `make` or `qmk compile`/`qmk flash` commands, eg. `planck/rev6`.
-  - type: input
-    attributes:
-      label: Link to product page (if applicable)
-  - type: input
-    attributes:
-      label: Operating System
-  - type: textarea
-    attributes:
-      label: qmk doctor Output
-      description: Output from running the `qmk doctor` command.
-      render: text
-  - type: checkboxes
-    attributes:
-      label: Is AutoHotKey / Karabiner installed
-      options:
-        - label: AutoHotKey (Windows)
-        - label: Karabiner (macOS)
-  - type: input
-    attributes:
-      label: Other keyboard-related software installed
-  - type: textarea
-    attributes:
-      label: Additional Context
-      description: Add any other relevant information about the problem here.
+      label: Does it happen on NuPhy's stock firmware?
+      options: ["Don't know", "No, only on this firmware", "Yes, on stock too"]

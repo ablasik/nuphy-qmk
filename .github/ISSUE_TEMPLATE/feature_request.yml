@@ -1,24 +1,17 @@
 name: Feature request
-description: Suggest a new feature or changes to existing features.
-title: "[Feature Request] "
-labels: ["enhancement", "help wanted"]
+description: Something the keyboard could do.
+labels: ["enhancement"]
 body:
-  - type: markdown
+  - type: dropdown
+    id: board
     attributes:
-      value: |
-        Provide a general summary of the changes you want in the title above.
-
-        Please refrain from asking maintainers to add support for specific keyboards -- it is unlikely they will have hardware available, and will not be able to help.
-        Your best bet is to take the initiative, add support, then submit a PR yourself.
-  - type: checkboxes
-    attributes:
-      label: Feature Request Type
-      options:
-        - label: Core functionality
-        - label: Add-on hardware support (eg. audio, RGB, OLED screen, etc.)
-        - label: Alteration (enhancement/optimization) of existing feature(s)
-        - label: New behavior
+      label: Keyboard
+      multiple: true
+      options: [Air96 V2, Air75 V2, Air60 V2]
   - type: textarea
+    id: what
     attributes:
-      label: Description
-      description: A few sentences describing what it is that you'd like to see in QMK. Additional information (such as links to spec sheets, licensing info, other related issues or PRs, etc) would be helpful.
+      label: What you'd like
+      description: What you want to do and why. If VIA can already do it (see README, Tips), say why that isn't enough.
+    validations:
+      required: true

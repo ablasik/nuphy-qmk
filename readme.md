@@ -143,7 +143,8 @@ Issues and PRs are welcome: bug reports, features, and ports to other NuPhy boar
 
 - Add a line for users to [`CHANGELOG.md`](CHANGELOG.md) under `[Unreleased]` (CI checks it; label the PR `skip-changelog` for changes nobody would notice).
 - If you change a keymap or a shortcut, rebuild the Quick Guides ([`docs/nuphy/guide`](docs/nuphy/guide)).
-- Wireless and sleep bugs are hard to reproduce. Please include your mode (BT/2.4G/USB), your sleep mode (`Fn+]` side LED color), your OS, and steps to reproduce.
+- Report bugs with the [bug form](../../issues/new?template=bug_report.yml): it asks for the board, the firmware version (the release's `.bin` name), the connection and the RF module version, without which wireless and sleep bugs can't be reproduced.
+- **Own an Air75 V2 or Air60 V2?** Nobody has tested the firmware on them yet. The pinned [testing issue](../../issues?q=is%3Aissue+is%3Aopen+label%3Atesting) has a short checklist.
 - The board code lives in [`keyboards/nuphy/`](keyboards/nuphy). Everything else is upstream QMK, so please don't edit core QMK files.
 
 ### Staying on current QMK
