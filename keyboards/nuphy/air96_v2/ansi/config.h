@@ -81,6 +81,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DRIVER_1_LED_TOTAL                  58
 #define DRIVER_2_LED_TOTAL                  (42 + 10)
 #define RGB_MATRIX_LED_COUNT                (DRIVER_1_LED_TOTAL + DRIVER_2_LED_TOTAL)
+#define IS31FL3733_LED_COUNT                RGB_MATRIX_LED_COUNT // custom RGB driver wraps QMK's IS31FL3733 one
+
+// EEPROM: wear leveling on the last 8 kB of flash (4 kB logical, like the old emulation)
+#define WEAR_LEVELING_BACKING_SIZE          8192
+#define WEAR_LEVELING_LOGICAL_SIZE          4096
 
 #define WAIT_US_TIMER                       GPTD14
 #define EECONFIG_KB_DATA_SIZE               32

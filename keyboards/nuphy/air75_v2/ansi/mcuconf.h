@@ -31,3 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #undef STM32_GPT_USE_TIM14
 #define STM32_GPT_USE_TIM14 TRUE
 #define STM32_TIM14_SUPPRESS_ISR
+
+// 1 ms idle-sleep wakeup timer
+#undef STM32_GPT_USE_TIM6
+#define STM32_GPT_USE_TIM6 TRUE
+#define STM32_GPT_TIM6_IRQ_PRIORITY 2

@@ -50,19 +50,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DYNAMIC_KEYMAP_MACRO_DELAY          8
 
 #define WAIT_US_TIMER                       GPTD14
-// #undef USE_CIE1931_CURVE
+// WS2812 timing (NuPhy's values), for QMK's driver and the side strip
+#define WS2812_TIMING                       850
+#define WS2812_T1H                          700
+#define WS2812_T0H                          150
+#define WS2812_LED_COUNT                    RGB_MATRIX_LED_COUNT // custom RGB driver wraps QMK's WS2812 one
 
-/*
-#define WS2812_PWM_DRIVER PWMD3
-#define WS2812_PWM_CHANNEL 2
-#define WS2812_PWM_PAL_MODE 1
-#define WS2812_DMA_STREAM STM32_DMA1_STREAM3
-#define WS2812_DMA_CHANNEL 3
-*/
-// #define WS2812_PWM_TARGET_PERIOD 800000
-
-
-#define WS2812_SPI_USE_CIRCULAR_BUFFER
+// EEPROM: wear leveling on the last 8 kB of flash (4 kB logical)
+#define WEAR_LEVELING_BACKING_SIZE          8192
+#define WEAR_LEVELING_LOGICAL_SIZE          4096
 
 #define EECONFIG_KB_DATA_SIZE               32
 #define FROW_COL_F1                         1 // F1..F12 on matrix row 0

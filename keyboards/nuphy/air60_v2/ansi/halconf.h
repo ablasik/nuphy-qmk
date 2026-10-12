@@ -29,3 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #undef HAL_USE_GPT
 #define HAL_USE_GPT TRUE
 
+
+// row-pin line events wake the MCU from deep sleep
+#undef PAL_USE_CALLBACKS
+#define PAL_USE_CALLBACKS TRUE

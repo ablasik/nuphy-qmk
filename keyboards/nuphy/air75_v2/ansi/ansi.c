@@ -609,7 +609,7 @@ bool rgb_matrix_indicators_kb(void) {
 /* qmk keyboard post init */
 void keyboard_post_init_kb(void) {
     gpio_init();
-    mcu_timer6_init();
+    idle_timer_init();
     rf_uart_init();
     reset_led_idx();
     wait_ms(500);
@@ -624,7 +624,6 @@ void keyboard_post_init_kb(void) {
     // debug_keyboard = true;
     // debug_mouse    = true;
 #endif
-    interrupt_source_init();
     keyboard_post_init_user();
 }
 

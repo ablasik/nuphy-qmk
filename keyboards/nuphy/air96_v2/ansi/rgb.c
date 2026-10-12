@@ -796,9 +796,9 @@ void layer_keys_show(void) {
     bool    fn    = layer == MAC_FN || layer == WIN_FN;
     if (!fn && layer != M_LAYER) { return; }
 
-    uint8_t v = rgb_matrix_get_val() > 96 ? rgb_matrix_get_val() : 96;
+    // full brightness whatever the backlight is set to: this is a lookup, and it
+    // has to read with the backlight off
     uint8_t r = fn ? 0x30 : 0xFF, g = fn ? 0xFF : 0xB0, b = fn ? 0xC0 : 0x10;
-    r = (r * v) >> 8, g = (g * v) >> 8, b = (b * v) >> 8;
 
     rgb_required = 1;
     for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
