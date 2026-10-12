@@ -7,10 +7,8 @@
         "debounce_type": "custom",
         "lto": true
     },
-    "debounce": 5,
     "features": {
         "bootmagic": true,
-        "command": false,
         "console": true,
         "extrakey": true,
         "key_lock": true,
@@ -50,15 +48,12 @@
     "rgb_matrix": {
         "driver": "custom",
         "center_point": [90, 25],
-        "max_brightness": 255,
         "val_steps": 36,
         "speed_steps": 51,
         "sleep": true,
         "led_process_limit": 10,
         "led_flush_limit": 26,
         "default": {
-            "animation": "cycle_left_right",
-            "hue": 0,
             "val": 144,
             "speed": 153
         },

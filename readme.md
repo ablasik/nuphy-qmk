@@ -66,9 +66,9 @@ Added in this repo:
 
 ## Quick Guide
 
-![Air96 V2 Quick Guide](keyboards/nuphy/air96_v2/ansi/quick_guide.png)
+![Air96 V2 Quick Guide](docs/nuphy/air96_v2_quick_guide.png)
 
-[Download the Quick Guide as PDF](keyboards/nuphy/air96_v2/ansi/quick_guide.pdf)
+[Download the Quick Guide as PDF](docs/nuphy/air96_v2_quick_guide.pdf)
 
 The guide shows the Air96 V2; the Air75 V2 uses almost the same combos. The full list of key combos is in each board's `customizations.md` ([Air96](keyboards/nuphy/air96_v2/ansi/customizations.md), [Air75](keyboards/nuphy/air75_v2/ansi/customizations.md), [Air60](keyboards/nuphy/air60_v2/ansi/customizations.md)); the Air60 notes cover what moves on a board without an F row.
 

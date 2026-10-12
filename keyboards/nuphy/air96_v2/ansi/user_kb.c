@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ansi.h"
 #include "mcu_pwr.h"
 #include "color.h"
-#include "settings.h"
 
 user_config_t   user_config;
 user_config_t   read_user_config;
@@ -723,6 +722,10 @@ void user_debug(void) {
 
 
 // or create week functios for user_config reset and game_config reset
+// hooks for a keymap to change the defaults after a settings reset
+__attribute__((weak)) void user_config_override(void) {}
+__attribute__((weak)) void game_config_override(void) {}
+
 /**
  * @brief User config to default setting.
  */

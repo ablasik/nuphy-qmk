@@ -6,7 +6,7 @@ COMMON_VPATH += $(DRIVER_PATH)/led/issi
 SRC += $(DRIVER_PATH)/led/issi/is31fl3733.c is31fl3733_side_driver.c
 SRC += rgb.c
 
-SRC += mcu_pwr.c sleep.c rf_driver.c rf_queue.c debounce.c redefine.c
+SRC += mcu_pwr.c sleep.c rf_driver.c rf_queue.c debounce.c
 UART_DRIVER_REQUIRED = yes
 EEPROM_DRIVER = wear_leveling
 WEAR_LEVELING_DRIVER = embedded_flash
