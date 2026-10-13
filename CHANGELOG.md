@@ -6,6 +6,10 @@ Write entries for people who type on the keyboard: what changes for them, not ho
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-13
+
+Your settings are kept from now on, including when you update. VIA remaps go back to the default keymap once more: QMK resets them for every new build, which a later version will fix.
+
 ### Added
 
 - `Fn+M+A` keeps the computer awake: no idle sleep or screen lock, remembered per connection. The key flashes green when on, red when off. While it's on, the keyboard doesn't sleep on that connection either, so it uses more battery.
@@ -13,6 +17,7 @@ Write entries for people who type on the keyboard: what changes for them, not ho
 ### Fixed
 
 - Setting changes (sleep mode, debounce, snap tap) showed their side-light confirmation only about half the time.
+- `Fn+M+Esc` restarts the keyboard; hold it 3 s (the keys flash white) for the bootloader. It used to land in the bootloader almost every time.
 - Flashing an update no longer resets your settings: holding Esc to enter the bootloader used to wipe them too.
 - A setting changed less than 10 s before a restart (`Fn+M+Esc`) is no longer lost.
 
