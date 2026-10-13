@@ -4,8 +4,6 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
-## [Unreleased]
-
 ## [1.1.1] - 2026-10-13
 
 VIA remaps are kept from now on, starting with this update.

@@ -144,7 +144,7 @@ qmk compile -kb nuphy/air96_v2/ansi -km default
 
 Issues and PRs are welcome: bug reports, features, and ports to other NuPhy boards.
 
-- Add a line for users to [`CHANGELOG.md`](CHANGELOG.md) under `[Unreleased]` (CI checks it; label the PR `skip-changelog` for changes nobody would notice).
+- Add a line for users to [`CHANGELOG.md`](CHANGELOG.md) under `## [Unreleased]` at the top, adding the heading if it isn't there (CI checks it; label the PR `skip-changelog` for changes nobody would notice).
 - If you change a keymap or a shortcut, rebuild the Quick Guides ([`docs/nuphy/guide`](docs/nuphy/guide)).
 - Report bugs with the [bug form](../../issues/new?template=bug_report.yml): it asks for the board, the firmware version (the release's `.bin` name), the connection and the RF module version, without which wireless and sleep bugs can't be reproduced.
 - **Own an Air75 V2 or Air60 V2?** Nobody has tested the firmware on them yet. The pinned [testing issue](../../issues?q=is%3Aissue+is%3Aopen+label%3Atesting) has a short checklist.

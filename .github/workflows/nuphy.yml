@@ -35,7 +35,7 @@ jobs:
         run: |
           files=$(git diff --name-only "$BASE" HEAD)
           if grep -q '^keyboards/nuphy/' <<< "$files" && ! grep -qx 'CHANGELOG.md' <<< "$files"; then
-            echo "::error::Add a line under [Unreleased] in CHANGELOG.md, or label the PR skip-changelog."
+            echo "::error::Add a line under ## [Unreleased] at the top of CHANGELOG.md (add the heading if it isn't there), or label the PR skip-changelog."
             exit 1
           fi
 
