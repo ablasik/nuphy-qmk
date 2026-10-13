@@ -111,6 +111,8 @@ Update the **RF module** and **dongle** to NuPhy's latest firmware (2.1.5) first
    ```
    [QMK Toolbox](https://github.com/qmk/qmk_toolbox) works too, but on Apple Silicon Macs it needs Rosetta (`softwareupdate --install-rosetta`); without it, it prints "Bad CPU type in executable" followed by a misleading "Flash complete", and nothing is flashed.
 
+If a flash fails and the keyboard doesn't start, it can't be bricked: pull off the Caps Lock keycap, hold the small DFU button underneath and plug in the cable. The keyboard comes up in the bootloader; flash it again.
+
 The first boot after switching from stock or adi4086 firmware resets the keyboard settings and the VIA keymap once.
 
 For remapping, load your board's VIA file in [VIA](https://usevia.app) (Settings → Show Design tab → Load): [Air96](keyboards/nuphy/air96_v2/ansi/keymaps/nuphy-air96-v2-via_custom_v4.json), [Air75](keyboards/nuphy/air75_v2/ansi/keymaps/nuphy-air75-v2-via_custom_v4.json), [Air60](keyboards/nuphy/air60_v2/ansi/keymaps/nuphy-air60-v2-via_custom_v4.json). The files are also attached to every release.
