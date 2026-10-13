@@ -65,7 +65,7 @@ The following customizations were applied on top of the stock firmware.
    This is achieved through a buffer of 64 key actions (key down and key up are 2 actions). The buffer is cleared if connection is not established within 1s after the last action. <br />
    Key events after the buffer is full will also be dropped. (Buffer algorithm taken from jincao1) <br />
 
--  FN + M + F1 => enables Debug mode. This mode will show messages in console including matrix scan rate and various settings changes
+-  FN + M + F1 => toggles Debug mode (the key flashes green when on, red when off). This mode will show messages in console including matrix scan rate and various settings changes
 
 -  FN + M + ESC => will reboot keyboard. If you do not unpress the ESC key, it will enter bootmode so you can load new firmware.
 

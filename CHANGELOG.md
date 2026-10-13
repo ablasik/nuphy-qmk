@@ -6,6 +6,11 @@ Write entries for people who type on the keyboard: what changes for them, not ho
 
 ## [Unreleased]
 
+### Fixed
+
+- VIA remaps are kept when you flash an update. QMK reset them to the default keymap with every new build.
+- `Fn+M+F1` shows whether debug is on: the key flashes green when on, red when off.
+
 ## [1.1.0] - 2026-10-13
 
 Your settings are kept from now on, including when you update. VIA remaps go back to the default keymap once more: QMK resets them for every new build, which a later version will fix.

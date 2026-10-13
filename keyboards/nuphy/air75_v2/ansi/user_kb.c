@@ -862,3 +862,18 @@ bool shutdown_kb(bool jump_to_bootloader) {
 // settings there, which turned every update into a factory reset. Factory
 // reset is its own key (DEV_RESET, hold).
 void bootmagic_reset_eeprom(void) {}
+
+#ifdef VIA_ENABLE
+// QMK stamps the VIA keymap with the build date and resets it whenever a build
+// from another day boots, so every update lost the remaps. A per-link config
+// stamped by this firmware means the stored keymap is ours: keep it. Fresh or
+// stock EEPROM still gets the default keymap. Should a release ever change the
+// keymap layout (layers, custom keycode values), it must force the reset.
+void via_init_kb(void) {
+    user_config_t stored;
+    eeconfig_read_kb_datablock(&stored, 0, sizeof(stored));
+    if ((stored.link_valid == LINK_CFG_VALID || stored.link_valid == LINK_CFG_VALID_V1) && !via_eeprom_is_valid()) {
+        via_eeprom_set_valid(true);
+    }
+}
+#endif

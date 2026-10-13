@@ -598,6 +598,7 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
 #ifndef NO_DEBUG
         case DB_TOGG:
+            signal_rgb_led(debug_enable ? 3 : 0, led_idx.KC_F1, UINT8_MAX, 2000); // green on, red off
             dprintf("Keyboard: %s @ QMK: %s | BUILD: %s (%s)\n", QMK_KEYBOARD, QMK_VERSION, QMK_BUILDDATE, QMK_GIT_HASH);
             break;
 #endif

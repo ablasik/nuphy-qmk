@@ -6,7 +6,7 @@ Releases are built by GitHub Actions (`.github/workflows/nuphy.yml`) from a tag.
 
 `vMAJOR.MINOR.PATCH`, one version for all boards:
 
-- **MAJOR**: flashing it resets the keyboard settings or the VIA keymap (the settings block or the EEPROM layout changed). Say so at the top of the release notes.
+- **MAJOR**: flashing it resets the keyboard settings or the VIA keymap (the settings block or the EEPROM layout changed). Say so at the top of the release notes. The VIA keymap survives updates (`via_init_kb` in `user_kb.c`); a release that changes the keymap layout (layer count, custom keycode values) has to reset it there.
 - **MINOR**: new features or behaviour changes.
 - **PATCH**: fixes only.
 
