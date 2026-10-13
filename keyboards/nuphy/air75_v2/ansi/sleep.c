@@ -41,6 +41,35 @@ void deep_sleep_handle(void) {
 }
 
 /**
+ * @brief  Keep awake is on for the current link and there's a host to keep awake.
+ *         The keyboard doesn't sleep on that link either, or it couldn't send.
+ */
+bool keep_awake(void) {
+    if (!(user_config.link_awake & (1 << dev_info.link_mode))) { return false; }
+    return dev_info.link_mode == LINK_USB ? USB_DRIVER.state != USB_SUSPENDED : dev_info.rf_state == RF_CONNECT;
+}
+
+/**
+ * @brief  Keep awake: every KEEP_AWAKE_MS move the pointer 1 px and back, so the
+ *         computer doesn't sleep or lock itself while idle.
+ */
+void keep_awake_task(void) {
+    static uint32_t last = 0;
+    if (!keep_awake() || timer_elapsed32(last) < KEEP_AWAKE_MS) { return; }
+    if (no_act_time < 100) { return; } // not mid-typing: RF mouse reports clear the key report buffer
+
+    last          = timer_read32();
+    uint32_t idle = no_act_time; // RF sends reset it; the nudge isn't the user, so fade and sleep timers carry on
+    report_mouse_t report = {.x = 1};
+    host_mouse_send(&report);
+    report.x = -1;
+    host_mouse_send(&report);
+    report.x = 0;
+    host_mouse_send(&report);
+    no_act_time = idle;
+}
+
+/**
  * @brief  Sleep Handle.
  */
 void sleep_handle(void) {
@@ -58,7 +87,7 @@ void sleep_handle(void) {
     // no MCU deep sleep on USB: STOP mode drives D+/D- low and the host sees a detach
     if (user_config.sleep_mode != 1 || f_rf_sleep || dev_info.link_mode == LINK_USB) {
         f_goto_deepsleep = 0;
-    } else if (no_act_time >= (user_config.light_sleep + DEEP_SLEEP_TIME) * T_MIN) {
+    } else if (!keep_awake() && no_act_time >= (user_config.light_sleep + DEEP_SLEEP_TIME) * T_MIN) {
         f_goto_deepsleep = 1;
     }
 
@@ -89,7 +118,7 @@ void sleep_handle(void) {
             usb_suspend_debounce = 0;
         }
 
-    } else if ( no_act_time >= (user_config.light_sleep * T_MIN) ) {
+    } else if (!keep_awake() && no_act_time >= (user_config.light_sleep * T_MIN)) {
         f_goto_sleep     = 1;
     } else if (rf_linking_time >= (dev_info.link_mode == LINK_RF_24 ? (link_timeout / 4) : link_timeout)) {
         f_goto_deepsleep = 1;

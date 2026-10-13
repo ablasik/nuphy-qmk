@@ -179,10 +179,13 @@ typedef struct
     uint8_t link_os;       // per-link Mac/Win: bit (1 << link_mode) set = Win
     uint8_t link_frow;     // per-link top row: bit (1 << link_mode) set = F1-F12 first, media with Fn
     uint8_t link_valid;    // LINK_CFG_VALID once the per-link settings are initialised
-    uint8_t reserved[5];   // room for new settings without another EEPROM reset
+    uint8_t link_awake;    // per-link keep awake: bit (1 << link_mode) set = keep the computer awake
+    uint8_t reserved[4];   // room for new settings without another EEPROM reset
 } user_config_t;
 
-#define LINK_CFG_VALID 0xA5
+#define LINK_CFG_VALID    0xA6
+#define LINK_CFG_VALID_V1 0xA5 // v1.0.0: before link_awake
+#define KEEP_AWAKE_MS     50000 // nudge period; under the 1 min minimum idle lock of macOS and Windows
 
 /*
  * Side light indicator palette, at indicator level (scaled by side brightness).
@@ -232,6 +235,7 @@ extern uint32_t           sleep_show_timer;
 extern uint16_t           f_rf_sw_press;
 extern uint16_t           f_rf_dfu_press;
 extern uint16_t           f_dev_reset_press;
+extern uint16_t           f_reboot_press;
 extern uint16_t           f_rgb_test_press;
 extern uint16_t           f_caps_word_tg;
 extern bool               f_bat_num_show;
@@ -294,6 +298,9 @@ void    dial_sw_fast_scan(void);
 void    toggle_link_os(void);
 void    link_prev(void);
 void    toggle_link_frow(void);
+void    toggle_link_awake(uint8_t led);
+bool    keep_awake(void);
+void    keep_awake_task(void);
 void    timer_pro(void);
 void    load_eeprom_data(void);
 void    delay_update_eeprom_data(void);

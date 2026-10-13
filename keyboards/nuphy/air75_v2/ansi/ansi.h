@@ -65,5 +65,6 @@ enum custom_keycodes {
     MACWIN_TG, // Mac/Win for the current connection (appended: keeps VIA numbering)
     LINK_PREV, // back to the previous wireless device
     LOCK_SCR,  // lock the computer: Ctrl+Cmd+Q on Mac, Win+L on Windows
-    FROW_SWAP  // swap F1-F12 and media keys on the top row, for the current connection
+    FROW_SWAP, // swap F1-F12 and media keys on the top row, for the current connection
+    AWAKE_TG   // keep the computer awake (no idle sleep or screen lock), for the current connection
 };

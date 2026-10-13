@@ -264,6 +264,7 @@ a:focus-visible { outline: 2px solid var(--fn); outline-offset: 2px; }
           <dt>{{fn BAT_SHOW}}</dt><dd>Keep the battery gauge on</dd>
           <dt>{{fnm SLEEP_D}} {{key m:SLEEP_I}}</dt><dd>Lights-off time, 1–100 min</dd>
           <dt>{{fnm SLEEP_NOW}}</dt><dd>Sleep now, e.g. before packing it</dd>
+          <dt>{{fnm AWAKE_TG}}</dt><dd>Keep the computer awake<small>No idle sleep or screen lock, per device. The keyboard doesn't sleep on it either.</small></dd>
         </dl>
         <p class="muted" style="margin-top:10px">On battery the backlight runs at half brightness and fades out after 30 s without typing; any key brings it back. Below 20% it switches off. No sleep while charging, on the cable, or in game mode.</p>
       </div>
@@ -300,7 +301,7 @@ a:focus-visible { outline: 2px solid var(--fn); outline-offset: 2px; }
         <h3>Maintenance</h3>
         <dl>
           <dt>{{fn DEV_RESET}}</dt><dd>Hold 3 s: factory reset<small>Clears all pairings and settings.</small></dd>
-          <dt>{{fnm QK_REBOOT}}</dt><dd>Restart<small>Keep holding Esc to enter the bootloader for flashing.</small></dd>
+          <dt>{{fnm QK_REBOOT}}</dt><dd>Restart<small>Hold 3 s, until the keys flash white: bootloader for flashing.</small></dd>
           <dt>{{fnm RF_DFU}}</dt><dd>Wireless wake delay<small>Hold 3 s on the cable: radio firmware update mode.</small></dd>
           <dt>{{fnm DB_TOGG}}</dt><dd>Debug messages (QMK console, cable)</dd>
           <dt>{{fn RGB_TEST}}</dt><dd>LED test</dd>

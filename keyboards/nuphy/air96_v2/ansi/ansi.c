@@ -327,6 +327,14 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
 
+        case QK_REBOOT: // tap: restart on release, with Esc up again; hold 3 s: bootloader (user_key_press)
+            if (record->event.pressed) {
+                f_reboot_press = 1;
+            } else if (f_reboot_press) {
+                soft_reset_keyboard();
+            }
+            return false;
+
         case DEV_RESET:
             if (record->event.pressed) {
                 f_dev_reset_press = 1;
@@ -491,6 +499,10 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) { toggle_link_frow(); }
             return false;
 
+        case AWAKE_TG:
+            if (record->event.pressed) { toggle_link_awake(g_led_config.matrix_co[record->event.key.row][record->event.key.col]); }
+            return false;
+
         case LOCK_SCR:
             if (record->event.pressed) {
                 bool mac = dev_info.sys_sw_state == SYS_SW_MAC;
@@ -653,6 +665,8 @@ void housekeeping_task_kb(void) {
     // toggled off, which kept LED power on and disabled low-battery saving.
     power_save();       // low power mode
     led_power_handle(); // power down unused LEDs
+
+    keep_awake_task();
 
     if (game_mode_enable) { return; }
 

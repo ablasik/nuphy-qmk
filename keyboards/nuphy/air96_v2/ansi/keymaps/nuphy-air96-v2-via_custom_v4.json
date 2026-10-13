@@ -308,6 +308,11 @@
 			"name": "F-keys\nMedia",
 			"title": "Swap F1-F12 and media keys on the top row, for the current connection",
 			"shortName": "FRow_Swap"
+		},
+		{
+			"name": "Keep\nAwake",
+			"title": "Keep the computer awake (no idle sleep or screen lock), for the current connection",
+			"shortName": "Awake_Tg"
 		}
 	]
 }

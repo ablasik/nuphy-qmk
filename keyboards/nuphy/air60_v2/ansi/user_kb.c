@@ -53,6 +53,7 @@ uint16_t       f_rf_sw_press           = 0;
 uint16_t       f_rf_dfu_press          = 0;
 uint16_t       f_rgb_test_press        = 0;
 uint16_t       f_dev_reset_press       = 0;
+uint16_t       f_reboot_press          = 0;
 uint16_t       f_caps_word_tg          = 0;
 uint16_t       f_numlock_press         = 0;
 uint16_t       f_gmode_reset_press     = 0;
@@ -132,6 +133,19 @@ void user_key_press(void) {
             }
         }
     } 
+
+    // Fn+M+Esc held 3 s: flash white, then restart with Esc still down, so
+    // bootmagic enters the bootloader
+    if (f_reboot_press) {
+        f_reboot_press++;
+        if (f_reboot_press > MEDIUM_PRESS_DELAY) {
+            pwr_led_on();
+            rgb_matrix_set_color_all(RGB_WHITE);
+            rgb_matrix_update_pwm_buffers();
+            wait_ms(300);
+            soft_reset_keyboard();
+        }
+    }
 
     // The device is restored to factory Settings
     if (f_dev_reset_press) {
@@ -305,9 +319,15 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
     uint8_t link_bit  = 1 << dev_info.link_mode;
     bool    dial_moved = last_dial != 0xFF && dial_os != last_dial;
 
+    if (user_config.link_valid == LINK_CFG_VALID_V1) { // keep v1.0.0's per-link settings, the new byte held garbage
+        user_config.link_awake    = 0;
+        user_config.link_valid    = LINK_CFG_VALID;
+        eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
+    }
     if (user_config.link_valid != LINK_CFG_VALID) {
         user_config.link_os       = dial_os == SYS_SW_WIN ? 0x1F : 0x00;
         user_config.link_frow     = 0; // top row as printed on every link
+        user_config.link_awake    = 0;
         user_config.link_valid    = LINK_CFG_VALID;
         eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
     } else if (dial_moved) {
@@ -404,6 +424,15 @@ void toggle_link_frow(void) {
     uint8_t a = g_led_config.matrix_co[0][FROW_COL_F1], b = g_led_config.matrix_co[0][FROW_COL_F12];
     signal_rgb_led(fkeys ? 9 : 6, MIN(a, b), MAX(a, b), 2000);
 #endif
+}
+
+/**
+ * @brief  keep the computer awake on the current link, or not. led: the key that was pressed.
+ */
+void toggle_link_awake(uint8_t led) {
+    user_config.link_awake ^= 1 << dev_info.link_mode;
+    eeconfig_update_kb_datablock_field(user_config, link_awake);
+    signal_rgb_led(user_config.link_awake & (1 << dev_info.link_mode) ? 3 : 0, led, UINT8_MAX, 2000); // green on, red off
 }
 
 /**
@@ -541,6 +570,8 @@ void call_update_eeprom_data(bool* eeprom_update_init) {
 /**
  * @brief User config update to eeprom with delay
  */
+void save_pending_settings(void);
+
 void delay_update_eeprom_data(void) {
     if (eeprom_update_timer == 0) {
         if (user_update || rgb_update) { eeprom_update_timer = timer_read32(); }
@@ -548,6 +579,13 @@ void delay_update_eeprom_data(void) {
     }
     // batch settings writes: a burst of changes (e.g. stepping through effects) is one write
     if (timer_elapsed32(eeprom_update_timer) < (1000 * 10)) { return; }
+    save_pending_settings();
+}
+
+/**
+ * @brief  Write settings still waiting for the delayed save, now.
+ */
+void save_pending_settings(void) {
     if (user_update) {
         if (game_mode_enable) {
             eeconfig_read_kb_datablock(&read_user_config, 0, sizeof(read_user_config));
@@ -823,3 +861,16 @@ void led_power_handle(void) {
 
     rgb_interval = 0;
 }
+
+// Restart and bootloader (Fn+M+Esc, VIA, flashing) go through here: don't lose
+// a change made in the last 10 s.
+bool shutdown_kb(bool jump_to_bootloader) {
+    if (!shutdown_user(jump_to_bootloader)) { return false; }
+    save_pending_settings();
+    return true;
+}
+
+// Esc held at power-up enters the bootloader for flashing. QMK also wipes the
+// settings there, which turned every update into a factory reset. Factory
+// reset is its own key (DEV_RESET, hold).
+void bootmagic_reset_eeprom(void) {}

@@ -72,7 +72,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 [M_LAYER] = LAYOUT_60_ansi(
      QK_REBOOT,   DB_TOGG,     RF_DFU,      _______,         _______,     _______,     _______,     _______,     _______,     _______,         _______,     DEBOUNCE_D,  DEBOUNCE_I,   _______,
      _______,     _______,     MACWIN_TG,     _______,         _______,     _______,     _______,     _______,     _______,     SLEEP_D,         SLEEP_I,     _______,     SLEEP_NOW,    _______,
-     CAPS_WORD,   _______,     _______,     DEBOUNCE_T,      _______,     GAME_MODE,   _______,     _______,     SOCD_TOG,    _______,         _______,     _______,                   _______,
+     CAPS_WORD,   AWAKE_TG,     _______,     DEBOUNCE_T,      _______,     GAME_MODE,   _______,     _______,     SOCD_TOG,    _______,         _______,     _______,                   _______,
      _______,     _______,     _______,     _______,         _______,     NUMLOCK_IND, _______,     _______,     SIDE_SPD,    SIDE_SPI,        _______,     _______,     SIDE_VAI,     _______,
      _______,     _______,     _______,                                                _______,                               _______,         _______,     SIDE_MOD,    SIDE_VAD,     SIDE_HUI)
 };

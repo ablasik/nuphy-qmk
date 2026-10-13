@@ -6,6 +6,16 @@ Write entries for people who type on the keyboard: what changes for them, not ho
 
 ## [Unreleased]
 
+### Added
+
+- `Fn+M+A` keeps the computer awake: no idle sleep or screen lock, remembered per connection. The key flashes green when on, red when off. While it's on, the keyboard doesn't sleep on that connection either, so it uses more battery.
+
+### Fixed
+
+- Setting changes (sleep mode, debounce, snap tap) showed their side-light confirmation only about half the time.
+- Flashing an update no longer resets your settings: holding Esc to enter the bootloader used to wipe them too.
+- A setting changed less than 10 s before a restart (`Fn+M+Esc`) is no longer lost.
+
 ## [1.0.0] - 2026-10-12
 
 First release of the community firmware, compared with [adi4086 v1.1.7.0](https://github.com/adi4086/qmk_firmware/releases/tag/v1.1.7.0). Flashing it resets the keyboard settings and the VIA keymap once.

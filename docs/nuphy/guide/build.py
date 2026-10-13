@@ -54,7 +54,7 @@ FUNCTION = {
     "QK_REBOOT": "Reboot", "DB_TOGG": "Debug", "RF_DFU": "RF delay", "DEBOUNCE_D": "Debounce −",
     "DEBOUNCE_I": "Debounce +", "SLEEP_D": "Sleep −", "SLEEP_I": "Sleep +", "MACWIN_TG": "Mac/Win",
     "SIDE_1": "One side", "SLEEP_NOW": "Sleep now", "CAPS_WORD": "Caps Word", "DEBOUNCE_T": "Debounce",
-    "FROW_SWAP": "F-keys ⇄", "GAME_MODE": "Game", "SOCD_TOG": "Snap tap", "NUMLOCK_IND": "Num light",
+    "FROW_SWAP": "F-keys ⇄", "AWAKE_TG": "Awake", "GAME_MODE": "Game", "SOCD_TOG": "Snap tap", "NUMLOCK_IND": "Num light",
     "SIDE_SPD": "Side spd −", "SIDE_SPI": "Side spd +", "SIDE_VAI": "Side +", "SIDE_VAD": "Side −",
     "SIDE_MOD": "Side mode", "SIDE_HUI": "Side colour", "WIN_LOCK": "Win lock",
 }

@@ -133,7 +133,8 @@ void side_toast(uint8_t n, uint8_t of, uint8_t r, uint8_t g, uint8_t b) {
     toast_n     = n;
     toast_of    = of;
     toast_rgb   = (rgb_t){.r = r, .g = g, .b = b};
-    toast_timer = timer_read32() | 1;
+    uint32_t now = timer_read32();
+    toast_timer  = now ? now : 1; // 0 = no toast. Not `now | 1`: that's 1 ms in the future half the time, which reads as long expired
 }
 
 static bool side_toast_show(void) {

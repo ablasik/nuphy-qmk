@@ -119,7 +119,7 @@ jobs:
             echo
             echo "## Flashing"
             echo
-            echo "Download the \`.bin\` for **your** board. Hold \`Fn+M+Esc\` and keep holding \`Esc\` to enter the bootloader, then:"
+            echo "Download the \`.bin\` for **your** board. Hold \`Fn+M+Esc\` for 3 s, until the keys flash white, to enter the bootloader, then:"
             echo
             echo '```sh'
             echo "dfu-util -a 0 -d 0483:DF11 -s 0x08000000:leave -D nuphy_air96_v2_${GITHUB_REF_NAME}.bin"

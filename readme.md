@@ -43,6 +43,7 @@ Added in this repo:
   - Fn+M+F swaps F1–F12 and media keys on the top row, per device.
   - Fn+Esc locks the computer.
   - Fn+Tab switches back to the previous device.
+  - Fn+M+A keeps the computer awake (no idle sleep or screen lock), per device.
   - On the cable the layout follows the detected OS.
   - On battery the backlight runs at half brightness and fades after 30 s idle.
 - **Mac/Win per connection**: USB, BT1–3 and 2.4G each remember their own layout. Flip the switch once per device; switching connections restores it.
@@ -103,7 +104,7 @@ Update the **RF module** and **dongle** to NuPhy's latest firmware (2.1.5) first
 
 1. Download the `.bin` for your board from [Releases](../../releases), or build it yourself (see below). Make sure the file name matches your keyboard.
 2. Connect the keyboard over USB.
-3. Press `Fn+M+Esc` and keep holding `Esc`. The keyboard reboots into the bootloader.
+3. Hold `Fn+M+Esc` for 3 s, until the keys flash white. The keyboard reboots into the bootloader (the lights stay off). Or unplug it and plug it back in while holding `Esc`.
 4. Flash the `.bin` from the command line (macOS: `brew install dfu-util`):
    ```sh
    dfu-util -a 0 -d 0483:DF11 -s 0x08000000:leave -D nuphy_air96_v2_ansi_default.bin
