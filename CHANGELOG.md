@@ -6,6 +6,10 @@ Write entries for people who type on the keyboard: what changes for them, not ho
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-13
+
+VIA remaps are kept from now on, starting with this update.
+
 ### Fixed
 
 - VIA remaps are kept when you flash an update. QMK reset them to the default keymap with every new build.
