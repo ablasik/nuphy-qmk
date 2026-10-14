@@ -2,9 +2,11 @@ name: NuPhy firmware
 
 # CI: every push to nuphy-keyboards and every PR touching the boards is linted,
 # built and gets fresh Quick Guides (all downloadable from the run's artifacts).
-# CD: pushing a tag like v1.2.0 creates a *draft* release with everything a user
-# needs; publish it by hand once the build was tried on a keyboard (RELEASING.md).
-# Tags with a dash (v1.2.0-rc1) become pre-releases.
+# CD: when a push brings a CHANGELOG.md version without a tag (the merged release
+# PR from nuphy_release.yml), or a tag like v1.2.0 is pushed, the build is tagged
+# and becomes a *draft* release with everything a user needs; publish it by hand
+# once it was tried on a keyboard (RELEASING.md). Tags with a dash (v1.2.0-rc1)
+# become pre-releases, with the [Unreleased] notes.
 
 on:
   push:
@@ -22,6 +24,24 @@ permissions:
   contents: read
 
 jobs:
+  version:
+    # the tag this run releases, if any
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          elif [[ $GITHUB_EVENT_NAME == push && $GITHUB_REF == refs/heads/nuphy-keyboards ]]; then
+            v=$(grep -m1 -oP '^## \[\K[0-9]+\.[0-9]+\.[0-9]+(?=\])' CHANGELOG.md)
+            if ! git ls-remote --exit-code --tags origin "refs/tags/v$v" > /dev/null; then
+              echo "tag=v$v" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
   changelog:
     # a PR that changes the firmware says what changed for users
     if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
@@ -41,6 +61,7 @@ jobs:
           fi
 
   firmware:
+    needs: version
     runs-on: ubuntu-latest
     container: ghcr.io/qmk/qmk_cli
     strategy:
@@ -61,6 +82,10 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          tag='${{ needs.version.outputs.tag }}'
+          if [ -n "$tag" ] && ! git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+            git tag "$tag"   # local only, so the build reports the version it's released as
+          fi
           qmk compile -kb nuphy/${{ matrix.board }}/ansi -km default
           version=$(git describe --tags --always)
           mkdir -p out
@@ -113,8 +138,8 @@ jobs:
           path: docs/nuphy/*_quick_guide.*
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [firmware, emulator, guides]
+    if: needs.version.outputs.tag != ''
+    needs: [version, firmware, emulator, guides]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -130,12 +155,15 @@ jobs:
 
       - name: Release notes
         shell: bash
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
         run: |
-          version=${GITHUB_REF_NAME#v}
+          version=${TAG#v}
+          if [[ $version == *-* ]]; then version=Unreleased; fi   # a pre-release: what's coming
           # the [x.y.z] section of CHANGELOG.md, up to the next version heading
           awk -v v="$version" '$0 ~ "^## \\[" {p = index($0, "[" v "]") > 0; next} p' CHANGELOG.md > changes.md
           if ! grep -q '[^[:space:]]' changes.md; then
-            echo "::error::CHANGELOG.md has no [$version] section. Rename [Unreleased] to [$version] before tagging (docs/nuphy/RELEASING.md)."
+            echo "::error::CHANGELOG.md has no [$version] section. Release with Actions → Release (docs/nuphy/RELEASING.md)."
             exit 1
           fi
           {
@@ -146,7 +174,7 @@ jobs:
             echo "Download the \`.bin\` for **your** board. Hold \`Fn+M+Esc\` for 3 s, until the keys flash white, to enter the bootloader, then:"
             echo
             echo '```sh'
-            echo "dfu-util -a 0 -d 0483:DF11 -s 0x08000000:leave -D nuphy_air96_v2_${GITHUB_REF_NAME}.bin"
+            echo "dfu-util -a 0 -d 0483:DF11 -s 0x08000000:leave -D nuphy_<board>_${TAG}.bin"
             echo '```'
             echo
             echo "Update the RF module and dongle to NuPhy's firmware 2.1.5 first. Load the matching VIA file in usevia.app to remap. The Quick Guide PDFs list every shortcut."
@@ -158,10 +186,22 @@ jobs:
             echo '```'
           } > notes.md
 
+      - name: Tag
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git tag -a "$TAG" -m "$TAG"
+            git push origin "$TAG"
+          fi
+
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.version.outputs.tag }}
           draft: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(needs.version.outputs.tag, '-') }}
           body_path: notes.md
           files: |
             out/*.bin
