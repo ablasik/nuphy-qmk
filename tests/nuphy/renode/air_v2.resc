@@ -1,0 +1,19 @@
+# Usage: $elf = @path/to/firmware.elf; include @air_v2.resc
+include @/work/tests/nuphy/renode/Stm32F0Fixes.cs
+include @/work/tests/nuphy/renode/IS31FL3733.cs
+include @/work/tests/nuphy/renode/NuphyRf.cs
+include @/work/tests/nuphy/renode/NuphyAirV2.cs
+
+mach create "air_v2"
+machine LoadPlatformDescription @/work/tests/nuphy/renode/air_v2.repl
+flash_if EraseAll
+sysbus LoadELF $elf
+sysbus WriteWord 0x1FFFF7CC 128
+# the ROM bootloader, as far as a keyboard without USB can tell: it waits for the host forever
+# (vector table: stack top, entry; the entry is `b .`)
+sysbus WriteDoubleWord 0x1FFFC800 0x20004000
+sysbus WriteDoubleWord 0x1FFFC804 0x1FFFC809
+sysbus WriteWord 0x1FFFC808 0xE7FE
+nmi_exit Arm
+board LoadSymbols $elf
+board Connect

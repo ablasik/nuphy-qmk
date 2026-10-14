@@ -1,0 +1,74 @@
+// NuPhy Air V2 (STM32F072CB at 48 MHz). Load the .cs files first (air_v2.resc does).
+using "platforms/cpus/stm32f072.repl"
+
+cpu:
+    PerformanceInMips: 48
+
+// booting from flash (BOOT0 low), the flash also shows at 0x0, where the core reads its reset
+// vectors (the M0 has no VTOR); Renode's platform maps it only at 0x08000000
+flash: @ { sysbus 0x08000000; sysbus 0x00000000 }
+
+// ChibiOS's tick timer (TIM2) and the GPTs derive their prescalers from the 48 MHz clock
+nvic:
+    systickFrequency: 48000000
+timer2:
+    frequency: 48000000
+timer6:
+    frequency: 48000000
+    -> nvic@17   // TIM6_DAC: wakes the idle WFI every 1 ms (mcu_pwr.c); unwired in Renode's platform
+
+rcc: @none
+rcc_fixed: Miscellaneous.Stm32F0Rcc @ sysbus 0x40021000
+
+flash_if: Miscellaneous.Stm32F0FlashInterface @ sysbus 0x40022000
+
+timer14: @none
+tim14: Miscellaneous.Stm32OnePulseTimer @ sysbus 0x40002000
+    frequency: 48000000
+
+nmi_exit: Miscellaneous.ChibiosNmiExit @ sysbus
+
+// system memory: ST's ROM DFU bootloader at 0x1FFFC800 and the flash size register at
+// 0x1FFFF7CC (KB), both written by the .resc
+sysmem: Memory.MappedMemory @ sysbus 0x1FFFC000
+    size: 0x4000
+
+// Renode's STM32F0 platform leaves I2C1 unwired; on the F072 events and errors share IRQ 23
+i2c1_irq: Miscellaneous.CombinedInput @ none
+    numberOfInputs: 2
+    -> nvic@23
+i2c1:
+    EventInterrupt -> i2c1_irq@0
+    ErrorInterrupt -> i2c1_irq@1
+
+// SYSCFG's EXTICR picks the port that drives each EXTI line (the rows wake the MCU from deep
+// sleep); Renode's F0 platform has no SYSCFG and wires every port's pin n into line n at once
+syscfg: Miscellaneous.STM32_SYSCFG @ sysbus 0x40010000
+    [0-15] -> exti@[0-15]
+gpioPortA:
+    [0-15] -> syscfg#0@[0-15]
+gpioPortB:
+    [0-15] -> syscfg#1@[0-15]
+gpioPortC:
+    [0-15] -> syscfg#2@[0-15]
+gpioPortD:
+    [0-15] -> syscfg#3@[0-15]
+gpioPortE:
+    [0-15] -> syscfg#4@[0-15]
+gpioPortF:
+    [0-15] -> syscfg#5@[0-15]
+
+// the two IS31FL3733 LED drivers: keys on the first, keys and side lights on the second
+led1: Miscellaneous.IS31FL3733 @ i2c1 0x50
+led2: Miscellaneous.IS31FL3733 @ i2c1 0x53
+
+rf: Miscellaneous.NuphyRf @ sysbus
+    uart: usart1
+
+board: Miscellaneous.NuphyAirV2 @ sysbus
+    portA: gpioPortA
+    portB: gpioPortB
+    portC: gpioPortC
+    portD: gpioPortD
+    led1: led1
+    led2: led2

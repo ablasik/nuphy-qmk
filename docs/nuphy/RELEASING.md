@@ -32,7 +32,7 @@ The firmware knows its version: QMK takes it from `git describe`, and it's print
    - side lights, Caps, battery bar (`Fn+\`);
    - settings survive unplugging (change something, wait 10 s, unplug).
 
-   Boards nobody could test are marked as untested in the notes.
+   Boards nobody could test are marked as untested in the notes. CI has already run the Air96 V2 build on an emulated board (`tests/nuphy`, locally: `dotnet run --project tests/nuphy/NuphyTests`, add `NUPHY_SLOW=1` for the real-time timer tests); the hardware check is for what emulation can't see: USB, the real radio, battery.
 8. **Publish** the draft.
 
 If something is wrong, delete the draft and the tag (`git push --delete origin v1.2.0`), fix, and tag again.
