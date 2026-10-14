@@ -513,6 +513,11 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                 unregister_code(mac ? KC_Q : KC_L);
                 unregister_code(KC_LGUI);
                 if (mac) { unregister_code(KC_LCTL); }
+            } else if (!USB_ACTIVE && user_config.sleep_mode != 0) {
+                // locked to walk away: sleep now, not after the idle timer (USB already sleeps with the host)
+                f_goto_sleep     = 1;
+                f_goto_deepsleep = 1;
+                no_act_time      = 100;
             }
             return false;
 

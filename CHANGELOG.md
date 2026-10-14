@@ -4,6 +4,12 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
+## [Unreleased]
+
+### Added
+
+- `Fn+Esc` (lock screen) also puts the keyboard to sleep right away over Bluetooth and 2.4G, instead of waiting for the sleep timer. On the cable it already sleeps along with the computer.
+
 ## [1.1.1] - 2026-10-13
 
 VIA remaps are kept from now on, starting with this update.
