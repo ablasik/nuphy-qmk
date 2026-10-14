@@ -17,6 +17,7 @@ on:
       - 'keyboards/nuphy/**'
       - 'docs/nuphy/**'
       - 'tests/nuphy/**'
+      - 'CHANGELOG.md'
       - '.github/workflows/nuphy*.yml'
   workflow_dispatch:
 
