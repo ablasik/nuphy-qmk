@@ -1,6 +1,6 @@
 # Releasing
 
-Releases are made by GitHub Actions: `nuphy_release.yml` opens a release PR, and merging it makes `nuphy.yml` tag the build and create a draft release. Nothing is built, tagged or uploaded by hand.
+A release is one commit that gives `## [Unreleased]` in `CHANGELOG.md` its version. When it reaches `nuphy-keyboards`, GitHub Actions (`nuphy.yml`) builds, tests and tags it and creates a draft release. Nothing is built, tagged or uploaded by hand.
 
 ## Versions
 
@@ -19,17 +19,16 @@ The firmware knows its version: QMK takes it from `git describe`, and it's print
 1. **Upstream QMK is merged.** The weekly *Sync upstream QMK* PR is merged or there isn't one waiting.
 2. **CI is green** on `nuphy-keyboards`: lint, all boards built, guides rendered, emulator tests passed.
 3. **The guides are current.** Run `python3 docs/nuphy/guide/build.py` and commit if anything changed.
-4. **Start the release:** Actions → *Release* → *Run workflow*, pick MAJOR, MINOR or PATCH (above). It opens a *Release v1.2.0* PR that renames `## [Unreleased]` in `CHANGELOG.md` to `## [1.2.0] - date`.
-5. **Read the PR as a user would**: its description is the release notes. Fix wording on the release branch, then merge.
-6. **CI tags the merge `v1.2.0` and creates a draft release**: the `[1.2.0]` changelog section as the notes, then for every board the `.bin`, the VIA file and the Quick Guide PDF, flashing instructions and SHA-256 sums.
-7. **Test the draft on hardware.** Flash the `.bin` from the draft itself, on at least the boards that changed:
+4. **Changelog.** Read the `[Unreleased]` entries as a user would (they become the release notes), pick MAJOR, MINOR or PATCH (above), rename the heading to `## [1.2.0] - YYYY-MM-DD`, commit (`Release v1.2.0`) and push to `nuphy-keyboards`. Pushing straight to the branch needs admin rights; anyone else opens a PR with that commit.
+5. **CI tags the commit `v1.2.0` and creates a draft release**: the `[1.2.0]` changelog section as the notes, then for every board the `.bin`, the VIA file and the Quick Guide PDF, flashing instructions and SHA-256 sums.
+6. **Test the draft on hardware.** Flash the `.bin` from the draft itself, on at least the boards that changed:
    - typing over USB, Bluetooth and 2.4G;
    - deep sleep (`Fn+M+]` on battery) and waking with a key press;
    - side lights, Caps, battery bar (`Fn+\`);
    - settings survive unplugging (change something, wait 10 s, unplug).
 
    Boards nobody could test are marked as untested in the notes. CI has already run the Air96 V2 build on an emulated board (`tests/nuphy`, locally: `dotnet run --project tests/nuphy/NuphyTests`, add `NUPHY_SLOW=1` for the real-time timer tests); the hardware check is for what emulation can't see: USB, the real radio, battery.
-8. **Publish** the draft.
+7. **Publish** the draft.
 
 If something is wrong, delete the draft and the tag (`git push --delete origin v1.2.0`), fix it on `nuphy-keyboards`, and push: CI sees `[1.2.0]` without a tag and releases again. Fixes worth their own line go under `[1.2.0]`, not a new `[Unreleased]`.
 

@@ -138,7 +138,7 @@ qmk compile -kb nuphy/air96_v2/ansi -km default
 
 - **Every push and pull request:** GitHub Actions lints and builds all boards and renders the Quick Guides. The `.bin` files and guides are in the run's artifacts, so any PR can be flashed and tried.
 - **Every week:** upstream QMK is merged on a `qmk-sync/<date>` branch, all boards are built on it, and a PR is opened with the result (an issue if the merge conflicts).
-- **Releases:** the *Release* action opens a release PR; merging it tags the build and makes a draft release with every board's `.bin`, VIA file and Quick Guide PDF; it's published after a test on real keyboards. What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md); how releases are made is in [`docs/nuphy/RELEASING.md`](docs/nuphy/RELEASING.md).
+- **Releases:** a commit that gives `[Unreleased]` in the changelog its version gets tagged by CI and becomes a draft release with every board's `.bin`, VIA file and Quick Guide PDF; it's published after a test on real keyboards. What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md); how releases are made is in [`docs/nuphy/RELEASING.md`](docs/nuphy/RELEASING.md).
 
 ## Contributing
 

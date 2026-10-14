@@ -2,8 +2,8 @@ name: NuPhy firmware
 
 # CI: every push to nuphy-keyboards and every PR touching the boards is linted,
 # built and gets fresh Quick Guides (all downloadable from the run's artifacts).
-# CD: when a push brings a CHANGELOG.md version without a tag (the merged release
-# PR from nuphy_release.yml), or a tag like v1.2.0 is pushed, the build is tagged
+# CD: when a push brings a CHANGELOG.md version without a tag (the "Release vX.Y.Z"
+# commit, RELEASING.md), or a tag like v1.2.0 is pushed, the build is tagged
 # and becomes a *draft* release with everything a user needs; publish it by hand
 # once it was tried on a keyboard (RELEASING.md). Tags with a dash (v1.2.0-rc1)
 # become pre-releases, with the [Unreleased] notes.
