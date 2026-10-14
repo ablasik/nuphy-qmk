@@ -10,6 +10,10 @@ Write entries for people who type on the keyboard: what changes for them, not ho
 
 - `Fn+Esc` (lock screen) also puts the keyboard to sleep right away over Bluetooth and 2.4G, instead of waiting for the sleep timer. On the cable it already sleeps along with the computer.
 
+### Fixed
+
+- After waking up, the keyboard no longer sends the RF module a burst of empty packets while the first key waits for the connection.
+
 ## [1.1.1] - 2026-10-13
 
 VIA remaps are kept from now on, starting with this update.
