@@ -41,12 +41,14 @@ void deep_sleep_handle(void) {
 }
 
 /**
- * @brief  Keep awake is on for the current link and there's a host to keep awake.
+ * @brief  Keep awake is on for the current link and its host isn't asleep.
  *         The keyboard doesn't sleep on that link either, or it couldn't send.
+ *         Over the air it holds through link blinks: a host that's really gone
+ *         still sends the keyboard to sleep via rf_linking_time / rf_disconnect_time.
  */
 bool keep_awake(void) {
     if (!(user_config.link_awake & (1 << dev_info.link_mode))) { return false; }
-    return dev_info.link_mode == LINK_USB ? USB_DRIVER.state != USB_SUSPENDED : dev_info.rf_state == RF_CONNECT;
+    return dev_info.link_mode != LINK_USB || USB_DRIVER.state != USB_SUSPENDED;
 }
 
 /**
@@ -56,6 +58,7 @@ bool keep_awake(void) {
 void keep_awake_task(void) {
     static uint32_t last = 0;
     if (!keep_awake() || timer_elapsed32(last) < KEEP_AWAKE_MS) { return; }
+    if (dev_info.link_mode != LINK_USB && dev_info.rf_state != RF_CONNECT) { return; } // nowhere to send it
     if (no_act_time < 100) { return; } // not mid-typing: RF mouse reports clear the key report buffer
 
     last          = timer_read32();

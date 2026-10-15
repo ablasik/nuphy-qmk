@@ -4,6 +4,12 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
+## [Unreleased]
+
+### Fixed
+
+- With keep awake (`Fn+M+A`) on over Bluetooth or 2.4G, the keyboard no longer falls asleep for good when the connection blinks for a moment. A computer that's really gone still puts it to sleep after 20 s.
+
 ## [1.2.0] - 2026-10-14
 
 ### Added
