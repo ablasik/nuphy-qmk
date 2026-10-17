@@ -93,6 +93,13 @@ jobs:
           cp nuphy_${{ matrix.board }}_ansi_default.bin "out/nuphy_${{ matrix.board }}_${version}.bin"
           cp keyboards/nuphy/${{ matrix.board }}/ansi/keymaps/*.json out/
 
+      - name: WS2812 side strip timing
+        shell: bash
+        run: |
+          # a soft-float call in the bit-bang loop breaks the 150 ns pulses (Air75 side lights)
+          ! arm-none-eabi-objdump -d .build/nuphy_${{ matrix.board }}_ansi_default.elf \
+            | awk '/<side_send_byte>:/,/^$/' | grep -q '__aeabi'
+
       - uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.board }}

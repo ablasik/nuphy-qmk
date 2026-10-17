@@ -65,11 +65,19 @@ bool         flush_side_leds = false;
 
 static void side_send_byte(uint8_t byte) {
     for (uint8_t bit = 0; bit < 8; bit++) { // MSB first
-        bool one = byte & (1 << (7 - bit));
-        gpio_write_pin_high(DRIVER_SIDE_PIN);
-        wait_ns(one ? WS2812_T1H : WS2812_T0H);
-        gpio_write_pin_low(DRIVER_SIDE_PIN);
-        wait_ns(one ? WS2812_T1L : WS2812_T0L);
+        // constant waits only: wait_ns(one ? T1H : T0H) makes the loop bound a runtime
+        // double, and soft-float on every bit stretches a 150 ns pulse to microseconds
+        if (byte & (1 << (7 - bit))) {
+            gpio_write_pin_high(DRIVER_SIDE_PIN);
+            wait_ns(WS2812_T1H);
+            gpio_write_pin_low(DRIVER_SIDE_PIN);
+            wait_ns(WS2812_T1L);
+        } else {
+            gpio_write_pin_high(DRIVER_SIDE_PIN);
+            wait_ns(WS2812_T0H);
+            gpio_write_pin_low(DRIVER_SIDE_PIN);
+            wait_ns(WS2812_T0L);
+        }
     }
 }
 

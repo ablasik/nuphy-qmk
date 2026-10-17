@@ -9,6 +9,7 @@ Write entries for people who type on the keyboard: what changes for them, not ho
 ### Fixed
 
 - With keep awake (`Fn+M+A`) on over Bluetooth or 2.4G, the keyboard no longer falls asleep for good when the connection blinks for a moment. A computer that's really gone still puts it to sleep after 20 s.
+- Air75 V2: the side lights follow their settings again (`Fn+M` combinations, one side only with `Fn+M+O`) instead of staying lit no matter what.
 
 ## [1.2.0] - 2026-10-14
 
