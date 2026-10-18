@@ -315,7 +315,7 @@ void dial_set(uint8_t dial_scan, bool led_sys_show) {
     // Mac/Win is remembered per link (USB, BT1-3, 2.4G). Moving the dial sets it
     // for the current link; switching links restores that link's setting.
     static uint8_t last_dial = 0xFF, last_link = 0xFF;
-    uint8_t dial_os   = (dial_scan & 0x02) ? SYS_SW_MAC : SYS_SW_WIN;
+    uint8_t dial_os   = (dial_scan & 0x02) ? SYS_SW_WIN : SYS_SW_MAC; // wired opposite to the Air75/Air96
     uint8_t link_bit  = 1 << dev_info.link_mode;
     bool    dial_moved = last_dial != 0xFF && dial_os != last_dial;
 

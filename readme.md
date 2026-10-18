@@ -7,10 +7,10 @@ NuPhy no longer develops the QMK firmware for its V2 boards, and the best commun
 | Keyboard   | Status                                  | Board code |
 |------------|-----------------------------------------|------------|
 | Air96 V2   | ✅ maintained (the author's board)        | [`keyboards/nuphy/air96_v2`](keyboards/nuphy/air96_v2/ansi) |
-| Air75 V2   | 🧪 same features, not yet tested on hardware | [`keyboards/nuphy/air75_v2`](keyboards/nuphy/air75_v2/ansi) |
-| Air60 V2   | 🧪 same features, not yet tested on hardware | [`keyboards/nuphy/air60_v2`](keyboards/nuphy/air60_v2/ansi) |
+| Air75 V2   | 🧪 same features, tested by users        | [`keyboards/nuphy/air75_v2`](keyboards/nuphy/air75_v2/ansi) |
+| Air60 V2   | 🧪 same features, tested by users        | [`keyboards/nuphy/air60_v2`](keyboards/nuphy/air60_v2/ansi) |
 
-All boards live on the `nuphy-keyboards` branch and share the same firmware code. If you own an Air75 V2 or Air60 V2, a test report (even "it works") in the issues helps a lot.
+All boards live on the `nuphy-keyboards` branch and share the same firmware code. The author only owns an Air96 V2, so the Air75 V2 and Air60 V2 are tested by their owners: a test report (even "it works") in the issues helps a lot.
 
 > [!WARNING]
 > This is unofficial firmware. Flashing it is at your own risk. The STM32 DFU bootloader can't be overwritten, so you can always go back to stock firmware.
@@ -147,7 +147,7 @@ Issues and PRs are welcome: bug reports, features, and ports to other NuPhy boar
 - Add a line for users to [`CHANGELOG.md`](CHANGELOG.md) under `## [Unreleased]` at the top, adding the heading if it isn't there (CI checks it; label the PR `skip-changelog` for changes nobody would notice).
 - If you change a keymap or a shortcut, rebuild the Quick Guides ([`docs/nuphy/guide`](docs/nuphy/guide)).
 - Report bugs with the [bug form](../../issues/new?template=bug_report.yml): it asks for the board, the firmware version (the release's `.bin` name), the connection and the RF module version, without which wireless and sleep bugs can't be reproduced.
-- **Own an Air75 V2 or Air60 V2?** Nobody has tested the firmware on them yet. The pinned [testing issue](../../issues?q=is%3Aissue+is%3Aopen+label%3Atesting) has a short checklist.
+- **Own an Air75 V2 or Air60 V2?** They're tested by users, not by the author. The pinned [testing issue](../../issues?q=is%3Aissue+is%3Aopen+label%3Atesting) has a short checklist.
 - The board code lives in [`keyboards/nuphy/`](keyboards/nuphy). Everything else is upstream QMK, so please don't edit core QMK files.
 
 ### Staying on current QMK

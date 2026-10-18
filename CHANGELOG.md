@@ -4,6 +4,12 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
+## [Unreleased]
+
+### Fixed
+
+- Air60 V2: the Mac/Win switch is no longer reversed. Layout still wrong after updating? Press `Fn+M+W`.
+
 ## [1.2.1] - 2026-10-17
 
 ### Fixed
