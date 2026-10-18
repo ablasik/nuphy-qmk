@@ -768,7 +768,7 @@ void user_config_reset(void) {
     user_config.light_sleep             = 2;
     user_config.alt_light_sleep         = 6;
     user_config.caps_word_enable        = 1;
-    user_config.numlock_state           = 1;
+    user_config.numlock_state           = 0; // no numpad: Windows keeps Num Lock on, which would hold the right strip
     user_config.socd_mode               = 0;
     user_config.link_valid              = 0; // re-seed per-link settings from the dial
     user_config.rf_delay_step           = 2;

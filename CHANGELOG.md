@@ -4,6 +4,12 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
+## [Unreleased]
+
+### Changed
+
+- Air75 V2 and Air60 V2: the Num Lock indicator is off by default. These boards have no numpad, and Windows keeps Num Lock on, so the right side bar stayed white instead of showing its effect. Already flashed? Press `Fn+M+N` twice to turn it off.
+
 ## [1.2.2] - 2026-10-18
 
 ### Fixed
