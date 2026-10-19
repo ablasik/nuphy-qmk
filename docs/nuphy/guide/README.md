@@ -34,6 +34,8 @@ When you change a keymap, rebuild the guides and nothing else needs touching.
 
 `template.html` is shared by all boards. Refer to functions, not keys:
 
+<div v-pre>
+
 | Write | Becomes |
 |---|---|
 | `{{fn LOCK_SCR}}` | Fn + the key that has `LOCK_SCR` on the Fn layer |
@@ -41,6 +43,8 @@ When you change a keymap, rebuild the guides and nothing else needs touching.
 | `{{key fn:RM_VALD}}` | only that key, e.g. after `{{fn RM_VALU}}` |
 | `{{STRIP c fx*}}` | a side strip, top LED first: `c` cyan, `fx` the side effect, `_` off, `x*` fills the rest |
 | `<!--if numpad-->…<!--endif-->` | only on boards with a numpad (also `frow`, `fnshift_m`, and `!` to negate) |
+
+</div>
 
 If a board doesn't have a function, the whole line that mentions it is left out, so keep each shortcut on its own line.
 
