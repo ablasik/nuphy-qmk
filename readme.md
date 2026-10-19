@@ -7,8 +7,8 @@ NuPhy no longer develops the QMK firmware for its V2 boards, and the best commun
 | Keyboard   | Status                                  | Board code |
 |------------|-----------------------------------------|------------|
 | Air96 V2   | ✅ maintained (the author's board)        | [`keyboards/nuphy/air96_v2`](keyboards/nuphy/air96_v2/ansi) |
-| Air75 V2   | 🧪 same features, tested by users        | [`keyboards/nuphy/air75_v2`](keyboards/nuphy/air75_v2/ansi) |
-| Air60 V2   | 🧪 same features, tested by users        | [`keyboards/nuphy/air60_v2`](keyboards/nuphy/air60_v2/ansi) |
+| Air75 V2   | 🧪 same features, partly tested by [@flpwgr](https://github.com/flpwgr) (side lights, effects) | [`keyboards/nuphy/air75_v2`](keyboards/nuphy/air75_v2/ansi) |
+| Air60 V2   | ✅ same features, fully tested by [@edwardsong05](https://github.com/edwardsong05) | [`keyboards/nuphy/air60_v2`](keyboards/nuphy/air60_v2/ansi) |
 
 All boards live on the `nuphy-keyboards` branch and share the same firmware code. The author only owns an Air96 V2, so the Air75 V2 and Air60 V2 are tested by their owners: a test report (even "it works") in the issues helps a lot.
 
