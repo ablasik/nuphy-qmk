@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "user_kb.h"
+#include "../../common/connection_actions.h"
 #include "uart.h" // qmk uart.h
 #include "ansi.h"
 #include "rf_queue.h"
@@ -222,6 +223,11 @@ void rf_protocol_receive(void) {
                 if (dev_info.link_mode == Usart_Mgr.RXDBuf[4]) {
                     error_cnt = 0;
 
+                    // A 3-byte ACK has no status payload. Sleep/sniff/error states
+                    // pause output but do not prove the HID session disconnected.
+                    if (RX_LEN >= 5 && Usart_Mgr.RXDLen >= 10 && Usart_Mgr.RXDBuf[5] <= RF_DISCONNECT) {
+                        connection_actions_rf_status(Usart_Mgr.RXDBuf[4], Usart_Mgr.RXDBuf[5] == RF_CONNECT);
+                    }
                     dev_info.rf_state = Usart_Mgr.RXDBuf[5];
 
                     if ((dev_info.rf_state == RF_CONNECT) && ((Usart_Mgr.RXDBuf[6] & 0xf8) == 0)) {
@@ -255,6 +261,7 @@ void rf_protocol_receive(void) {
                 memcpy(func_tab, &Usart_Mgr.RXDBuf[4], 32);
 
                 if (func_tab[4] <= LINK_USB) {
+                    if (dev_info.link_mode != func_tab[4]) { connection_actions_observed_change(); }
                     dev_info.link_mode = func_tab[4];
                 }
 
@@ -294,6 +301,7 @@ uint8_t uart_send_cmd(uint8_t cmd, uint8_t wait_ack, uint8_t delayms) {
 
     switch (cmd) {
         case CMD_SLEEP: {
+            connection_actions_user_activity();
             Usart_Mgr.TXDBuf[3] = 1;
             Usart_Mgr.TXDBuf[4] = 0;
             Usart_Mgr.TXDBuf[5] = 0;
@@ -315,6 +323,7 @@ uint8_t uart_send_cmd(uint8_t cmd, uint8_t wait_ack, uint8_t delayms) {
         }
 
         case CMD_SET_LINK: {
+            connection_actions_user_activity();
             dev_info.rf_state   = RF_LINKING;
             Usart_Mgr.TXDBuf[3] = 1;
             Usart_Mgr.TXDBuf[4] = dev_info.link_mode;
@@ -326,6 +335,7 @@ uint8_t uart_send_cmd(uint8_t cmd, uint8_t wait_ack, uint8_t delayms) {
         }
 
         case CMD_NEW_ADV: {
+            connection_actions_user_activity();
             dev_info.rf_state   = RF_PAIRING;
             Usart_Mgr.TXDBuf[3] = 2;
             Usart_Mgr.TXDBuf[4] = dev_info.link_mode;
@@ -451,6 +461,7 @@ void dev_sts_sync(void) {
     interval_timer = timer_read32();
 
     if (f_rf_reset) {
+        connection_actions_invalidate();
         f_rf_reset = 0;
         wait_ms(100);
         gpio_write_pin_low(NRF_RESET_PIN);

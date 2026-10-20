@@ -106,3 +106,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #undef SPACE_CADET_ENABLE
 */
 
+
+// Reset OS fingerprint at the bus event, before new descriptor requests.
+#define OS_DETECTION_RESET_ON_USB_BUS_RESET

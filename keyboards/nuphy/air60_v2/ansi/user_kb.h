@@ -180,7 +180,7 @@ typedef struct
     uint8_t link_frow;     // per-link top row: bit (1 << link_mode) set = F1-F12 first, media with Fn
     uint8_t link_valid;    // LINK_CFG_VALID once the per-link settings are initialised
     uint8_t link_awake;    // per-link keep awake: bit (1 << link_mode) set = keep the computer awake
-    uint8_t reserved[4];   // room for new settings without another EEPROM reset
+    uint8_t reserved[4];   // Connection Actions ownership marker; preserve on settings saves
 } user_config_t;
 
 #define LINK_CFG_VALID    0xA6
@@ -307,6 +307,7 @@ void    delay_update_eeprom_data(void);
 void    user_config_reset(void);
 void    led_power_handle(void);
 void    set_link_mode(void);
+void    request_link_mode(uint8_t mode, bool pairing);
 void    matrix_io_delay(void);
 void    game_mode_tweak(void);
 void    user_debug(void);

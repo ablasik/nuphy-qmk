@@ -150,15 +150,21 @@ void nvm_dynamic_keymap_update_buffer(uint32_t offset, uint32_t size, uint8_t *d
     }
 }
 
+__attribute__((weak)) uint32_t dynamic_keymap_macro_eeprom_size(uint32_t available) {
+    return available;
+}
+
 uint32_t nvm_dynamic_keymap_macro_size(void) {
-    return DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE;
+    uint32_t size = dynamic_keymap_macro_eeprom_size(DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE);
+    return size >= 100 && size <= DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE ? size : DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE;
 }
 
 void nvm_dynamic_keymap_macro_read_buffer(uint32_t offset, uint32_t size, uint8_t *data) {
+    uint32_t macro_size = nvm_dynamic_keymap_macro_size();
     void    *source = (void *)(uintptr_t)(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + offset);
     uint8_t *target = data;
     for (uint16_t i = 0; i < size; i++) {
-        if (offset + i < DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE) {
+        if (offset + i < macro_size) {
             *target = eeprom_read_byte(source);
         } else {
             *target = 0x00;
@@ -169,10 +175,11 @@ void nvm_dynamic_keymap_macro_read_buffer(uint32_t offset, uint32_t size, uint8_
 }
 
 void nvm_dynamic_keymap_macro_update_buffer(uint32_t offset, uint32_t size, uint8_t *data) {
+    uint32_t macro_size = nvm_dynamic_keymap_macro_size();
     void    *target = (void *)(uintptr_t)(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + offset);
     uint8_t *source = data;
     for (uint16_t i = 0; i < size; i++) {
-        if (offset + i < DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE) {
+        if (offset + i < macro_size) {
             eeprom_update_byte(target, *source);
         }
         source++;
@@ -181,11 +188,12 @@ void nvm_dynamic_keymap_macro_update_buffer(uint32_t offset, uint32_t size, uint
 }
 
 void nvm_dynamic_keymap_macro_reset(void) {
+    uint32_t macro_size = nvm_dynamic_keymap_macro_size();
     void   *start     = (void *)(uintptr_t)(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR);
-    void   *end       = (void *)(uintptr_t)(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE);
+    void   *end       = (void *)(uintptr_t)(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR + macro_size);
     long    remaining = end - start;
     uint8_t dummy[16] = {0};
-    for (int i = 0; i < DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE; i += sizeof(dummy)) {
+    for (int i = 0; i < macro_size; i += sizeof(dummy)) {
         int this_loop = remaining < sizeof(dummy) ? remaining : sizeof(dummy);
         eeprom_update_block(dummy, start, this_loop);
         start += this_loop;
