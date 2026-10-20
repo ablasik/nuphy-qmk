@@ -13,6 +13,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "user_kb.h"
+#include "../../common/connection_actions.h"
 #include "ws2812_driver.h"
 #include "mcu_pwr.h"
 #include "hal_usb.h"
@@ -37,6 +38,7 @@ static const pin_t col_pins[MATRIX_COLS] = MATRIX_COL_PINS;
  * @note This is Nuphy's "open sourced" sleep logic. It's not deep sleep.
  */
 void enter_light_sleep(void) {
+    connection_actions_user_activity();
     if ((dev_info.link_mode == LINK_RF_24 && f_rf_sleep) || dev_info.rf_state != RF_CONNECT) {
         uart_send_cmd(CMD_SLEEP, 5, 5);
     } else {

@@ -18,3 +18,5 @@ OPT = s $(GCC_EXTRA_OPTIONS)
 CUSTOM_MATRIX = lite
 SRC += matrix.c
 
+
+SRC += keyboards/nuphy/common/connection_actions.c

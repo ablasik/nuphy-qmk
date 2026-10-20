@@ -4,6 +4,16 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
+## [Unreleased]
+
+### Added
+
+- Air60 V2, Air75 V2 and Air96 V2: configure four Connection Actions in VIA to run a saved macro on the current computer before switching away, or on the new computer after connecting. Existing keymaps and macros are preserved; if there is no unused room for the rules, the feature stays unavailable without resetting settings.
+
+### Fixed
+
+- Air60 V2, Air75 V2 and Air96 V2: USB OS detection no longer loses a newly collected result when a queued USB reset notification arrives late. Wireless hosts still have no automatic OS detection.
+
 ## [1.2.3] - 2026-10-18
 
 ### Changed

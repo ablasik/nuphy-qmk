@@ -110,7 +110,10 @@ void dynamic_keymap_macro_get_buffer(uint16_t offset, uint16_t size, uint8_t *da
     nvm_dynamic_keymap_macro_read_buffer(offset, size, data);
 }
 
+__attribute__((weak)) void dynamic_keymap_macro_changed(void) {}
+
 void dynamic_keymap_macro_set_buffer(uint16_t offset, uint16_t size, uint8_t *data) {
+    dynamic_keymap_macro_changed();
     nvm_dynamic_keymap_macro_update_buffer(offset, size, data);
 }
 
@@ -132,6 +135,7 @@ char send_string_get_next_nvm(void *arg) {
 }
 
 void dynamic_keymap_macro_reset(void) {
+    dynamic_keymap_macro_changed();
     // Erase the macros, if necessary.
     nvm_dynamic_keymap_macro_erase();
     nvm_dynamic_keymap_macro_reset();

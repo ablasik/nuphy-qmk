@@ -117,6 +117,8 @@ The first boot after switching from stock or adi4086 firmware resets the keyboar
 
 For remapping, load your board's VIA file in [VIA](https://usevia.app) (Settings → Show Design tab → Load): [Air96](keyboards/nuphy/air96_v2/ansi/keymaps/nuphy-air96-v2-via_custom_v4.json), [Air75](keyboards/nuphy/air75_v2/ansi/keymaps/nuphy-air75-v2-via_custom_v4.json), [Air60](keyboards/nuphy/air60_v2/ansi/keymaps/nuphy-air60-v2-via_custom_v4.json). The files are also attached to every release.
 
+**Connection Actions.** In VIA, configure up to four rules to run an existing macro before switching away from the current computer or after the new connection is ready. USB OS conditions use detection; Bluetooth/2.4G can match Any or Unknown. See the [setup, storage compatibility and limitations](keyboards/nuphy/common/connection_actions.md).
+
 ## Building
 
 The easiest way is Docker, which needs no local toolchain:

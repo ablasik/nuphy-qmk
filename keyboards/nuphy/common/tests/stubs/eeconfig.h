@@ -1,0 +1,3 @@
+#pragma once
+#define EECONFIG_KB_DATA_SIZE 32
+#define EECONFIG_USER_DATA_SIZE 0

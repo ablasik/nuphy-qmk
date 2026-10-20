@@ -27,6 +27,9 @@
 #include "usb_descriptor.h"
 #include "usb_driver.h"
 #include "usb_types.h"
+#if defined(OS_DETECTION_ENABLE) && defined(OS_DETECTION_RESET_ON_USB_BUS_RESET)
+#    include "os_detection.h"
+#endif
 
 #ifdef RAW_ENABLE
 #    include "raw_hid.h"
@@ -190,6 +193,11 @@ static void usb_event_cb(USBDriver *usbp, usbevent_t event) {
         case USB_EVENT_UNCONFIGURED:
             /* Falls into.*/
         case USB_EVENT_RESET:
+#if defined(OS_DETECTION_ENABLE) && defined(OS_DETECTION_RESET_ON_USB_BUS_RESET)
+            // Descriptor callbacks run in ISR context too. Clear BEFORE any new
+            // samples arrive, not later when usb_event_queue_task drains Reset.
+            if (event == USB_EVENT_RESET) { erase_wlength_data(); }
+#endif
             usb_event_queue_enqueue(event);
             chSysLockFromISR();
             for (int i = 0; i < USB_ENDPOINT_IN_COUNT; i++) {

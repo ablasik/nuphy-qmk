@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "user_kb.h"
+#include "../../common/connection_actions.h"
 #include "os_detection.h"
 #include "ansi.h"
 #include "mcu_pwr.h"
@@ -102,12 +103,45 @@ void gpio_init(void) {
     gpio_set_pin_input_high(SYS_MODE_PIN);
 }
 
-void set_link_mode(void) {
-    f_rf_sw_press = 0;
+// Main-task request latch: no RF/UART mode command until before-switch playback
+// and its release reports have completed on the source transport.
+static bool requested_link_pending, requested_pairing;
+static uint8_t requested_link;
 
-    dev_info.link_mode   = rf_sw_temp;
-    dev_info.rf_channel  = rf_sw_temp;
-    dev_info.ble_channel = rf_sw_temp;
+static void requested_link_task(void) {
+    if (!requested_link_pending || !connection_actions_before_switch(requested_link)) { return; }
+    requested_link_pending = false;
+    if (requested_link != LINK_USB) {
+        dev_info.rf_channel = requested_link;
+        dev_info.ble_channel = requested_link;
+    }
+    switch_dev_link(requested_link);
+    f_send_channel = 0;
+    uart_send_cmd(CMD_SET_LINK, 10, 20);
+    if (requested_pairing) {
+        uint8_t timeout = 5;
+        while (timeout--) {
+            uart_send_cmd(CMD_NEW_ADV, 0, 1);
+            wait_ms(20);
+            uart_receive_pro();
+            if (f_rf_new_adv_ok) { break; }
+        }
+    }
+    rf_blink_cnt = 3;
+}
+
+void request_link_mode(uint8_t mode, bool pairing) {
+    if (mode > LINK_USB) { return; }
+    if (!requested_link_pending || requested_link != mode) { connection_actions_cancel_switch(); }
+    requested_link = mode;
+    requested_pairing = pairing;
+    requested_link_pending = true;
+    f_rf_sw_press = 0;
+    requested_link_task();
+}
+
+void set_link_mode(void) {
+    request_link_mode(rf_sw_temp, false);
 }
 
 /**
@@ -118,19 +152,13 @@ void user_key_press(void) {
     long_press_timer = 0;
 
     dial_sw_scan();
+    requested_link_task();
 
     // Open a new RF device
     if (f_rf_sw_press) {
         f_rf_sw_press++;
         if (f_rf_sw_press > MEDIUM_PRESS_DELAY) {
-            set_link_mode();
-            uint8_t timeout = 5;
-            while (timeout--) {
-                uart_send_cmd(CMD_NEW_ADV, 0, 1);
-                wait_ms(20);
-                uart_receive_pro();
-                if (f_rf_new_adv_ok) { break; }
-            }
+            request_link_mode(rf_sw_temp, true);
         }
     } 
 
@@ -263,6 +291,8 @@ void break_all_key(void) {
  */
 void switch_dev_link(uint8_t mode) {
     if (mode > LINK_USB) { return; }
+    if (mode != dev_info.link_mode) { connection_actions_invalidate(); }
+    else { connection_actions_user_activity(); }
     no_act_time = 0;
     break_all_key();
 
@@ -376,7 +406,6 @@ void link_prev(void) {
     break_all_key();
     rf_sw_temp = prev_rf_link;
     set_link_mode();
-    uart_send_cmd(CMD_SET_LINK, 10, 20);
 }
 
 /**
@@ -455,6 +484,9 @@ void dial_sw_scan(void) {
     dial_scan       = dial_read();
 
     if (dial_save != dial_scan) {
+        connection_actions_cancel_switch();
+        requested_link_pending = false;
+        connection_actions_user_activity();
         break_all_key();
 
         no_act_time      = 0;
@@ -463,13 +495,16 @@ void dial_sw_scan(void) {
 
         dial_save         = dial_scan;
         debounce          = 10;
-        f_dial_sw_init_ok = 0;
+        // Keep source readiness while debouncing a transport switch.
         return;
     } else if (debounce) {
         debounce--;
         return;
     }
 
+    uint8_t target = (dial_scan & 0x01) ? LINK_USB : dev_info.rf_channel;
+    if (!requested_link_pending && !connection_actions_before_switch(target)) { return; }
+    if (requested_link_pending) { return; }
     dial_set(dial_scan, true);
 
     if (f_dial_sw_init_ok == 0) {
@@ -560,6 +595,7 @@ void timer_pro(void) {
 void load_eeprom_data(void) {
     eeconfig_read_kb_datablock(&user_config, 0, sizeof(user_config));
     if (user_config.init_layer < 100) { user_config_reset(); }
+    connection_actions_init();
 }
 
 void call_update_eeprom_data(bool* eeprom_update_init) {
@@ -794,6 +830,7 @@ void user_config_reset(void) {
     user_config_override();
     game_config_reset(0);
     eeconfig_update_kb_datablock(&user_config, 0, sizeof(user_config));
+    connection_actions_init();
 }
 
 void game_config_reset(uint8_t save_to_eeprom) {

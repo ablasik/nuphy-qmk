@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "user_kb.h"
+#include "../../common/connection_actions.h"
 #include "ansi.h"
 #include "mcu_pwr.h"
 #include "version.h"
@@ -28,6 +29,7 @@ char            socd_type[4][14] = { "disabled", "cancellation", "exclusion", "n
 
 /* qmk pre-process record */
 bool pre_process_record_kb(uint16_t keycode, keyrecord_t *record) {
+    connection_actions_key_event(record->event.pressed);
     no_act_time      = 0;
     rf_linking_time  = 0;
 
@@ -178,8 +180,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) {
                 break_all_key();
             } else {
-                dev_info.link_mode = LINK_USB;
-                uart_send_cmd(CMD_SET_LINK, 10, 10);
+                request_link_mode(LINK_USB, false);
                 rf_blink_cnt = 3; // link indicator blink, like stock
             }
             return false;
@@ -194,7 +195,6 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             } else {
                 if (f_rf_sw_press) {
                     set_link_mode();
-                    uart_send_cmd(CMD_SET_LINK, 10, 20);
                 }
                 for (uint8_t i = 0; i < 4; i++) {
                     rgb_matrix_set_color(led_idx.LINK[i], RGB_OFF);
@@ -669,6 +669,8 @@ void housekeeping_task_kb(void) {
     // toggled off, which kept LED power on and disabled low-battery saving.
     power_save();       // low power mode
     led_power_handle(); // power down unused LEDs
+
+    connection_actions_task();
 
     keep_awake_task();
 

@@ -61,6 +61,16 @@ jobs:
             exit 1
           fi
 
+  connection-actions-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Native connection actions and USB OS regression tests
+        run: bash keyboards/nuphy/common/tests/run.sh
+
   firmware:
     needs: version
     runs-on: ubuntu-latest
@@ -147,7 +157,7 @@ jobs:
 
   release:
     if: needs.version.outputs.tag != ''
-    needs: [version, firmware, emulator, guides]
+    needs: [version, firmware, emulator, guides, connection-actions-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: write

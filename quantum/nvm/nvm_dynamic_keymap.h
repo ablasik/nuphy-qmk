@@ -19,6 +19,11 @@ void     nvm_dynamic_keymap_update_encoder(uint8_t layer, uint8_t encoder_id, bo
 void nvm_dynamic_keymap_read_buffer(uint32_t offset, uint32_t size, uint8_t *data);
 void nvm_dynamic_keymap_update_buffer(uint32_t offset, uint32_t size, uint8_t *data);
 
+// EEPROM backend only: optionally reserve a tail after a keyboard-specific,
+// lossless migration. Return a stable size in [100, available]; invalid values
+// fall back to available. All reads, writes, reset and size queries use it.
+// Changing the boundary must preserve the macro validity sentinel.
+uint32_t dynamic_keymap_macro_eeprom_size(uint32_t available);
 uint32_t nvm_dynamic_keymap_macro_size(void);
 
 void nvm_dynamic_keymap_macro_read_buffer(uint32_t offset, uint32_t size, uint8_t *data);
