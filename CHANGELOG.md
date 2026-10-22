@@ -4,6 +4,12 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
+## [Unreleased]
+
+### Fixed
+
+- Bluetooth and 2.4G: right after waking up or a brief connection drop, the keyboard no longer sends a key from the previous one again (often Cmd from a `Cmd+Tab`). Your first shortcut used to mix with it: the app switcher stuck open, or an app quit.
+
 ## [1.2.3] - 2026-10-18
 
 ### Changed

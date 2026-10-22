@@ -47,4 +47,37 @@ public class SleepTests(Renode renode) : IClassFixture<Renode>
         Assert.Contains("E1: 00 00 04 00 00 00 00 00", kb.RfFrames);
         Assert.Equal(0, kb.RfCount(0x00)); // nothing dequeued yet used to go out as empty frames
     }
+
+    // the report the last wake left in the queue went out again first on the next wake
+    [Fact]
+    public void The_next_wake_doesnt_replay_keys_from_the_last_one()
+    {
+        var kb = new Keyboard(renode).Boot();
+        kb.Combo("fn", "esc").Run(1000);
+        kb.Press("cmd").Run(100).Tap("tab").Run(1500); // Cmd still held as the queue drains
+        kb.Release("cmd").Run(200);
+        kb.Combo("fn", "esc").Run(1000);
+        Assert.True(kb.DeepSleep);
+        kb.RfClear();
+
+        kb.Press("a").Run(1500);
+
+        Assert.Contains("E1: 00 00 04 00 00 00 00 00", kb.RfFrames);
+        Assert.DoesNotContain(kb.RfFrames, f => f.StartsWith("E1: 08")); // no Cmd from the last wake
+    }
+
+    // same over a link blink mid-typing: no sleep in between to clear it, only 750 ms idle
+    [Fact]
+    public void A_link_blink_doesnt_replay_keys_from_the_last_one()
+    {
+        var kb = new Keyboard(renode).Boot();
+        kb.Rf("State", 2).Run(300).Press("cmd").Run(100); // RF_LINKING: queued
+        kb.Rf("State", 3).Run(550).Tap("tab").Run(300); // typing on as the queue drains (680 ms), Cmd held
+        kb.Release("cmd").Run(50).RfClear();
+
+        kb.Rf("State", 2).Run(300).Press("q").Run(100).Rf("State", 3).Run(1500);
+
+        Assert.Contains("E1: 00 00 14 00 00 00 00 00", kb.RfFrames);
+        Assert.DoesNotContain(kb.RfFrames, f => f.StartsWith("E1: 08")); // no Cmd from before the blink
+    }
 }

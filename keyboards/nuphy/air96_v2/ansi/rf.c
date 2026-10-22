@@ -48,6 +48,7 @@ uint32_t dequeue_delay       = 0;
 
 report_buffer_t byte_report_buff = {0};
 report_buffer_t bit_report_buff  = {0};
+static report_buffer_t queue_report = {0}; // the queued report being sent now
 
 extern host_driver_t * m_host_driver;
 extern host_driver_t   rf_host_driver;
@@ -85,6 +86,7 @@ void clear_report_buffer(void) {
 void clear_report_buffer_and_queue(void) {
     clear_report_buffer();
     rf_queue.clear();
+    queue_report = (report_buffer_t){0}; // else the next wake sends it again before its own keys
 }
 
 /**
@@ -93,27 +95,27 @@ void clear_report_buffer_and_queue(void) {
 void uart_send_repeat_from_queue(void) {
     static uint32_t        dequeue_timer = 0;
     static uint8_t         f_send_delay  = 0;
-    static report_buffer_t report_buff   = {0};
 
     if (timer_elapsed32(dequeue_timer) > 12 && !rf_queue.is_empty()) { //50 //15 ? 
         if (timer_elapsed32(dequeue_timer) < 20) { dequeue_delay += timer_elapsed32(dequeue_timer); }
         f_send_delay = dev_info.link_mode > 0 ? 3 : user_config.rf_delay_step;
-        if (dequeue_delay > f_send_delay * 200 + 80) { rf_queue.dequeue(&report_buff); }
+        if (dequeue_delay > f_send_delay * 200 + 80) { rf_queue.dequeue(&queue_report); }
         dequeue_timer = timer_read32();
     }
 
     // queue is empty, continue sending from standard process.
     if (rf_queue.is_empty()) {
-        clear_report_buffer_and_queue();
+        clear_report_buffer();
         dequeue_delay = 0;
-        if (report_buff.length > 6) { byte_report_buff = report_buff; }
+        if (queue_report.length > 6) { byte_report_buff = queue_report; }
     }
 
-    if (report_buff.cmd && report_buff.repeat < 24) { // nothing dequeued yet: no empty (cmd 0) frames
+    if (queue_report.cmd && queue_report.repeat < 24) { // nothing dequeued yet: no empty (cmd 0) frames
         wait_us(25);
-        uart_send_report(report_buff.cmd, report_buff.buffer, report_buff.length);
-        report_buff.repeat++;
+        uart_send_report(queue_report.cmd, queue_report.buffer, queue_report.length);
+        queue_report.repeat++;
     }
+    if (rf_queue.is_empty()) { queue_report = (report_buffer_t){0}; } // sent: a later link blink mustn't replay it
 }
 
 /**
