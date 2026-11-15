@@ -4,20 +4,29 @@
 // change that, and SET_LINK moves it to another slot.
 using System.Collections.Generic;
 using System.Linq;
+using Antmicro.Renode.Core;
 using Antmicro.Renode.Peripherals.UART;
+using Antmicro.Renode.Peripherals.Timers;
+using Antmicro.Renode.Time;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class NuphyRf : IPeripheral
     {
-        public NuphyRf(IUART uart)
+        public NuphyRf(IMachine machine, IUART uart)
         {
             this.uart = uart;
             uart.CharReceived += OnChar;
+            babble = new LimitTimer(machine.ClockSource, 1000000, this, "babble", 50, Direction.Ascending, eventEnabled: true, autoUpdate: true);
+            babble.LimitReached += () => uart.WriteChar(Head);
         }
+
+        // a module that won't stop talking: a frame head (0x5A) every 50 us, never a whole frame
+        public bool Babble { get => babble.Enabled; set => babble.Enabled = value; }
 
         public void Reset()
         {
+            babble.Enabled = false;
             rx.Clear();
             frames.Clear();
         }
@@ -39,6 +48,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public string Log() => string.Join("\n", frames.Select(f => f.Item1.ToString("X2") + ": " + string.Join(" ", f.Item2.Select(b => b.ToString("X2")))));
 
         public void Clear() => frames.Clear();
+
+        // bytes the module sends unasked, as hex ("5A F4 A0": the 2.4G dongle's host suspended)
+        public void Inject(string hex) => Send(hex.Split(' ').Select(s => System.Convert.ToByte(s, 16)).ToArray());
 
         // the last bytes received, raw, for diagnosing framing
         public string Raw => string.Join(" ", raw.Select(b => b.ToString("X2")));
@@ -102,6 +114,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         }
 
         private readonly IUART uart;
+        private readonly LimitTimer babble;
         private readonly List<byte> rx = new List<byte>();
         private readonly Queue<byte> raw = new Queue<byte>();
         private readonly List<(byte, byte[])> frames = new List<(byte, byte[])>();

@@ -70,4 +70,22 @@ public class TypingTests(Renode renode) : IClassFixture<Renode>
         kb.Release("d").Run(50);
         Assert.Equal("04", KeysDown(kb.RfLast(Keys))); // A again
     }
+
+    // 1.2.5: an RF module that kept sending bytes held the keyboard in its UART read loop: no
+    // keys, frozen lights, no switching to BT, until the power switch. Now keys still go out, and
+    // the keyboard resets the module, as it does one that stops answering.
+    [Fact]
+    public void A_module_that_wont_stop_talking_doesnt_freeze_the_keyboard()
+    {
+        var kb = new Keyboard(renode).Boot();
+        bool resetPinLow() => (Convert.ToUInt32(renode.Execute("sysbus ReadDoubleWord 0x48000414"), 16) & 0x10) == 0; // GPIOB ODR, NRF_RESET_PIN B4
+        kb.Rf("Babble", true).Run(300).RfClear();
+
+        kb.Press("a").Run(200);
+        Assert.Equal("00 00 04 00 00 00 00 00", kb.RfLast(Keys));
+
+        Assert.True(kb.RunUntil(resetPinLow, 3000, 10), "the keyboard didn't reset the module");
+        kb.Rf("Babble", false).Run(500).Release("a").Run(100); // reset: quiet again
+        Assert.Equal("00 00 00 00 00 00 00 00", kb.RfLast(Keys));
+    }
 }

@@ -167,8 +167,6 @@ void rf_protocol_receive(void) {
     uint8_t i, check_sum = 0;
 
     if (Usart_Mgr.RXDState == RX_Done) {
-        sync_lost = 0;
-
         if (RX_LEN >= UART_MAX_LEN - 4) {
             Usart_Mgr.RXDState = RX_DATA_ERR;
             return;
@@ -197,6 +195,7 @@ void rf_protocol_receive(void) {
             return;
         }
 
+        sync_lost = 0; // a valid frame: the module is alive. Not on junk, or one stuck talking is never reset
         Usart_Mgr.RXCmd = RX_CMD;
 
         switch (RX_CMD) {
@@ -596,7 +595,8 @@ void uart_receive_pro(void) {
         // Receiving serial data from RF module
         // keep reading while bytes trickle in: a byte is ~24us at 460800 baud, so a
         // longer frame (status sync, read data) may not be fully there after 200us
-        while (uart_available() || (wait_us(200), uart_available())) {
+        // at most one buffer per pass: a module that never stops sending held the main loop here (frozen keyboard)
+        for (uint8_t n = 0; n < UART_MAX_LEN && (uart_available() || (wait_us(200), uart_available())); n++) {
             uint8_t byte = uart_read();
             if (byte == UART_HEAD) { // valid UART transaction always begins with 0x5A
                 rcv_start = true;

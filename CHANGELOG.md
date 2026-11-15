@@ -4,6 +4,12 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
+## [Unreleased]
+
+### Fixed
+
+- Bluetooth and 2.4G: the keyboard no longer freezes when the wireless module keeps sending data: no key worked, the side lights stopped, you couldn't switch to Bluetooth, and only switching it off and on helped. It now keeps working and restarts the wireless module, as it already did when the module went silent.
+
 ## [1.2.4] - 2026-10-22
 
 ### Fixed

@@ -93,6 +93,8 @@ public sealed class Keyboard(Renode renode)
 
     public Keyboard Rf(string property, int value) { renode.Execute($"rf {property} {value}"); return this; }
 
+    public Keyboard Rf(string property, bool value) { renode.Execute($"rf {property} {value}"); return this; }
+
     // ---- LEDs, as "r g b"
     public bool LedPower => renode.Execute("board LedPower") == "True";
 
