@@ -4,6 +4,14 @@ All notable changes to the nuphy-qmk firmware. The format follows [Keep a Change
 
 Write entries for people who type on the keyboard: what changes for them, not how the code changed. Note which boards an entry applies to when it isn't all of them.
 
+## [Unreleased]
+
+### Fixed
+
+- Sleep now (`Fn+M+]`) and lock (`Fn+Esc`) on Bluetooth and 2.4G: the keyboard no longer wakes right back up when you let go of Fn a moment after the other keys. It now goes to sleep once every key is released.
+- Sleep now (`Fn+M+]`) also works with sleep mode set to Never (it did nothing). Never still only stops the keyboard from going to sleep on its own.
+- Quick Guide: LED test (`Fn+C`) and Caps Word (`Fn+M+Caps`) say how long to hold them (3 s and 1 s).
+
 ## [1.2.5] - 2026-11-15
 
 ### Fixed

@@ -72,6 +72,15 @@ void keep_awake_task(void) {
     no_act_time = idle;
 }
 
+bool f_sleep_now = 0;
+
+static bool any_key_held(void) {
+    for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+        if (matrix_get_row(row)) { return true; }
+    }
+    return false;
+}
+
 /**
  * @brief  Sleep Handle.
  */
@@ -80,12 +89,21 @@ void sleep_handle(void) {
     static uint8_t  usb_suspend_debounce = 0;
     static uint32_t rf_disconnect_time = 0;
 
-    if (user_config.sleep_mode == 0 || USB_ACTIVE) { return; }
+    if (USB_ACTIVE) { f_sleep_now = 0; return; }
+    if (user_config.sleep_mode == 0 && !f_sleep_now) { return; } // Never: only Sleep now puts it to sleep
     if (delay_step_timer > 100) { no_act_time = 0; } 
 
     /* 500ms interval */
     if (delay_step_timer < 50) { return; }
     delay_step_timer = 0;
+
+    // Sleep now and Fn+Esc: wait until every key is let go, or letting go of Fn wakes it right back up
+    if (f_sleep_now && !any_key_held()) {
+        f_sleep_now      = 0;
+        f_goto_sleep     = 1;
+        f_goto_deepsleep = 1;
+        no_act_time      = 100;
+    }
 
     // no MCU deep sleep on USB: STOP mode drives D+/D- low and the host sees a detach
     if (user_config.sleep_mode != 1 || f_rf_sleep || dev_info.link_mode == LINK_USB) {

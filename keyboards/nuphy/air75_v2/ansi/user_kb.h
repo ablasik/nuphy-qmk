@@ -254,6 +254,7 @@ extern bool               f_rf_sleep;
 extern bool               f_wakeup_prepare;
 extern bool               f_goto_sleep;
 extern bool               f_goto_deepsleep;
+extern bool               f_sleep_now;
 
 extern uint32_t           eeprom_update_timer;
 extern bool               rgb_update;

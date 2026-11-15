@@ -30,6 +30,7 @@ char            socd_type[4][14] = { "disabled", "cancellation", "exclusion", "n
 bool pre_process_record_kb(uint16_t keycode, keyrecord_t *record) {
     no_act_time      = 0;
     rf_linking_time  = 0;
+    if (record->event.pressed) { f_sleep_now = 0; } // a new key press cancels a pending Sleep now
 
 
     // wake up immediately
@@ -425,13 +426,8 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) {
                 wait_ms(100);
             } else {
-                if (user_config.sleep_mode == 0) { return true; }
-                else {
-                    f_goto_sleep     = 1;
-                    f_goto_deepsleep = 1;
-                    no_act_time      = 100;
-                    break_all_key();
-                }
+                f_sleep_now = 1; // sleeps once every key is let go (sleep_handle), even when sleep mode is Never
+                break_all_key();
             }
             return false;
 
@@ -515,9 +511,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                 if (mac) { unregister_code(KC_LCTL); }
             } else if (!USB_ACTIVE && user_config.sleep_mode != 0) {
                 // locked to walk away: sleep now, not after the idle timer (USB already sleeps with the host)
-                f_goto_sleep     = 1;
-                f_goto_deepsleep = 1;
-                no_act_time      = 100;
+                f_sleep_now = 1; // sleeps once every key is let go (sleep_handle)
             }
             return false;
 

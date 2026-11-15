@@ -30,6 +30,39 @@ public class SleepTests(Renode renode) : IClassFixture<Renode>
         Assert.True(kb.DeepSleep);
     }
 
+    // 1.2.6: letting go of Fn (and M) a moment after the last key no longer wakes the keyboard right back up
+    [Theory]
+    [InlineData("esc")]
+    [InlineData("m", "]")]
+    public void Sleep_now_waits_until_every_key_is_let_go(params string[] keys)
+    {
+        var kb = new Keyboard(renode).Boot();
+
+        kb.Press("fn").Run(50);
+        foreach(var key in keys[..^1]) { kb.Press(key).Run(50); }
+        kb.Tap(keys[^1]).Run(500); // a person lets go of the combo's last key first
+        foreach(var key in keys[..^1].Reverse()) { kb.Release(key).Run(50); }
+        kb.Release("fn").Run(1500);
+
+        Assert.True(kb.DeepSleep);
+        Assert.False(kb.LedPower);
+    }
+
+    // 1.2.6: Sleep now did nothing with sleep mode set to Never
+    [Fact]
+    public void Sleep_now_works_with_sleep_mode_Never()
+    {
+        var kb = new Keyboard(renode).Boot();
+        kb.Press("fn").Run(50).Tap("]").Run(100).Tap("]").Run(100).Release("fn").Run(2500); // full saving -> lights only -> never
+
+        kb.Combo("fn", "m", "]").Run(1500);
+
+        Assert.False(kb.LedPower);
+        Assert.False(kb.DeepSleep); // Never: light sleep only
+        kb.Press("a").Run(1500);
+        Assert.True(kb.LedPower);
+    }
+
     // 1.0.0: the first key after deep sleep is no longer lost
     [Fact]
     public void A_key_wakes_the_keyboard_and_still_goes_out()

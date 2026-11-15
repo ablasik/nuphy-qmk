@@ -31,6 +31,18 @@ public class ConnectionTests(Renode renode) : IClassFixture<Renode>
         Assert.Equal(1, kb.Byte("dev_info"));
     }
 
+    // holding Fn, 2 then 3 switches twice (a tester on an Air75 had to let go of Fn between them; not seen here)
+    [Fact]
+    public void Fn_held_switches_connections_one_after_another()
+    {
+        var kb = new Keyboard(renode).Boot().RfClear();
+
+        kb.Press("fn").Run(50).Tap("2").Run(500).Tap("3").Run(500).Release("fn").Run(200);
+
+        Assert.Equal("03", kb.RfLast(SetLink));
+        Assert.Equal(3, kb.Byte("dev_info")); // link_mode
+    }
+
     // 1.0.0: Mac/Win is remembered per connection, Fn+M+W flips it
     [Fact]
     public void Fn_M_W_flips_Mac_and_Windows_for_this_connection_only()
